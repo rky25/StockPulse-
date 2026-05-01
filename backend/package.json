@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "**StockPulse** is an institutional-grade, real-time intraday trading terminal and AI-assisted decision engine. Designed for high-frequency day traders, it abstracts away complex technical analysis and provides clear, high-confluence entry and exit signals based on a multi-layered market intelligence architecture.",
   "main": "app.js",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
