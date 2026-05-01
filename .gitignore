@@ -9,3 +9,4 @@ patch_final.js
 out/
 *.sqlite
 *.sqlite3
+backend/data.json
