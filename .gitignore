@@ -7,3 +7,5 @@ patch2.js
 patch_final.js
 .next/
 out/
+*.sqlite
+*.sqlite3
