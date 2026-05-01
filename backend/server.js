@@ -15,6 +15,35 @@ const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '';
 const NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.1-70b-instruct';
 const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1/chat/completions';
 
+// ===== AUTH DEPENDENCIES =====
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const db = require('./db');
+const { sendVerificationEmail, sendResetPasswordEmail } = require('./mailer');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev';
+
+// ===== HELPER: Parse JSON Body =====
+function parseJSONBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (e) {
+        reject(e);
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function sendJSON(res, statusCode, data) {
+  res.writeHead(statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+  res.end(JSON.stringify(data));
+}
+
 // ===== MIME TYPES =====
 const mimeTypes = {
   '.html': 'text/html',
@@ -271,6 +300,128 @@ Market Hours: 9:15 AM – 3:30 PM IST (Mon-Fri)`;
 }
 
 
+// ===== AUTHENTICATION ENDPOINTS (POST) =====
+async function handleAuth(req, res, pathname) {
+  if (req.method !== 'POST') {
+    return sendJSON(res, 405, { error: 'Method Not Allowed' });
+  }
+
+  try {
+    const body = await parseJSONBody(req);
+
+    if (pathname === '/api/auth/signup') {
+      const { name, email } = body;
+      if (!name || !email) return sendJSON(res, 400, { error: 'Name and email are required' });
+
+      // Check if user already exists and is verified
+      db.get('SELECT * FROM users WHERE email = ? AND is_verified = 1', [email], (err, row) => {
+        if (row) return sendJSON(res, 400, { error: 'Email already registered' });
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60000).toISOString(); // 10 mins
+
+        db.run('INSERT INTO otps (email, otp_code, type, expires_at) VALUES (?, ?, ?, ?)', 
+          [email, otp, 'signup', expiresAt], 
+          async (err) => {
+            if (err) return sendJSON(res, 500, { error: 'Failed to generate OTP' });
+            
+            const sent = await sendVerificationEmail(email, otp);
+            if (sent) sendJSON(res, 200, { message: 'OTP sent to email' });
+            else sendJSON(res, 500, { error: 'Failed to send email' });
+          }
+        );
+      });
+
+    } else if (pathname === '/api/auth/verify-signup') {
+      const { name, email, otp, password } = body;
+      if (!email || !otp || !password || !name) return sendJSON(res, 400, { error: 'All fields required' });
+
+      // Verify OTP
+      db.get('SELECT * FROM otps WHERE email = ? AND otp_code = ? AND type = "signup" AND expires_at > CURRENT_TIMESTAMP ORDER BY id DESC LIMIT 1', 
+        [email, otp], 
+        async (err, row) => {
+          if (!row) return sendJSON(res, 400, { error: 'Invalid or expired OTP' });
+
+          const hash = await bcrypt.hash(password, 10);
+          
+          db.run('INSERT INTO users (name, email, password_hash, is_verified) VALUES (?, ?, ?, 1) ON CONFLICT(email) DO UPDATE SET password_hash=excluded.password_hash, is_verified=1',
+            [name, email, hash],
+            (err) => {
+              if (err) return sendJSON(res, 500, { error: 'Failed to create user' });
+              
+              // Clean up OTP
+              db.run('DELETE FROM otps WHERE email = ? AND type = "signup"', [email]);
+              sendJSON(res, 200, { message: 'Account created successfully' });
+            }
+          );
+        }
+      );
+
+    } else if (pathname === '/api/auth/login') {
+      const { email, password } = body;
+      if (!email || !password) return sendJSON(res, 400, { error: 'Email and password required' });
+
+      db.get('SELECT * FROM users WHERE email = ? AND is_verified = 1', [email], async (err, user) => {
+        if (!user) return sendJSON(res, 400, { error: 'Invalid email or password' });
+
+        const isMatch = await bcrypt.compare(password, user.password_hash);
+        if (!isMatch) return sendJSON(res, 400, { error: 'Invalid email or password' });
+
+        const token = jwt.sign({ id: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: '7d' });
+        sendJSON(res, 200, { message: 'Logged in successfully', token, user: { id: user.id, name: user.name, email: user.email } });
+      });
+
+    } else if (pathname === '/api/auth/forgot-password') {
+      const { email } = body;
+      if (!email) return sendJSON(res, 400, { error: 'Email required' });
+
+      db.get('SELECT * FROM users WHERE email = ? AND is_verified = 1', [email], (err, user) => {
+        if (!user) return sendJSON(res, 400, { error: 'User not found' });
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const expiresAt = new Date(Date.now() + 10 * 60000).toISOString();
+
+        db.run('INSERT INTO otps (email, otp_code, type, expires_at) VALUES (?, ?, ?, ?)', 
+          [email, otp, 'reset', expiresAt], 
+          async (err) => {
+            if (err) return sendJSON(res, 500, { error: 'Failed to generate OTP' });
+            
+            const sent = await sendResetPasswordEmail(email, otp);
+            if (sent) sendJSON(res, 200, { message: 'Reset OTP sent' });
+            else sendJSON(res, 500, { error: 'Failed to send email' });
+          }
+        );
+      });
+
+    } else if (pathname === '/api/auth/reset-password') {
+      const { email, otp, newPassword } = body;
+      if (!email || !otp || !newPassword) return sendJSON(res, 400, { error: 'All fields required' });
+
+      db.get('SELECT * FROM otps WHERE email = ? AND otp_code = ? AND type = "reset" AND expires_at > CURRENT_TIMESTAMP ORDER BY id DESC LIMIT 1', 
+        [email, otp], 
+        async (err, row) => {
+          if (!row) return sendJSON(res, 400, { error: 'Invalid or expired OTP' });
+
+          const hash = await bcrypt.hash(newPassword, 10);
+          
+          db.run('UPDATE users SET password_hash = ? WHERE email = ?', [hash, email], (err) => {
+            if (err) return sendJSON(res, 500, { error: 'Failed to reset password' });
+            
+            db.run('DELETE FROM otps WHERE email = ? AND type = "reset"', [email]);
+            sendJSON(res, 200, { message: 'Password reset successfully' });
+          });
+        }
+      );
+    } else {
+      sendJSON(res, 404, { error: 'Auth route not found' });
+    }
+
+  } catch (e) {
+    sendJSON(res, 400, { error: 'Invalid request JSON' });
+  }
+}
+
 // ===== CORS PREFLIGHT HANDLER =====
 function handleCors(req, res) {
   res.writeHead(204, {
@@ -320,6 +471,9 @@ const server = http.createServer((req, res) => {
       res.writeHead(405, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Method Not Allowed' }));
     }
+
+  } else if (pathname.startsWith('/api/auth/')) {
+    handleAuth(req, res, pathname);
 
   } else {
     // ---- Static File Server ----

@@ -2,6 +2,9 @@
 
 import { useState, useEffect, use } from 'react';
 import { TrendingUp, TrendingDown, Clock, BarChart3, Activity as ActivityIcon } from 'lucide-react';
+import MasterVerdictPanel from '../../../../components/dashboard/MasterVerdictPanel';
+import TradingChart from '../../../../components/dashboard/TradingChart';
+import { RSI, MACD, SMA, EMA, ADX, CCI, Stochastic, AwesomeOscillator } from 'technicalindicators';
 
 /* ── SVG Gauge Component ── */
 function TechnicalGauge({ title, value, verdict, sell, neutral, buy, size = 180 }) {
@@ -121,6 +124,7 @@ export default function StockPage({ params }) {
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('technicals');
+  const [realCandles, setRealCandles] = useState([]);
 
   useEffect(() => {
     fetch(`/api/proxy/chart/${symbol}?interval=1d&range=5d`)
@@ -150,68 +154,140 @@ export default function StockPage({ params }) {
       .catch(() => setLoading(false));
   }, [symbol]);
 
-  const price = quote?.regularMarketPrice || 0;
+  const price = quote?.regularMarketPrice || (realCandles.length > 0 ? realCandles[realCandles.length - 1].close : 0);
   const change = quote?.regularMarketChange || 0;
   const changePct = quote?.regularMarketChangePercent || 0;
   const isUp = change >= 0;
   const companyName = quote?.shortName || quote?.longName || displaySymbol;
 
-  // Compute technical indicators from price
+  // Compute REAL technical indicators from live candle data
   const computeIndicators = () => {
     const p = price || 1430;
+    
+    // If we don't have enough candles yet, return neutral placeholders
+    if (realCandles.length < 50) {
+      return { 
+        oscillators: [{ name: 'Gathering live data...', value: '--', action: 'Neutral', weight: 0 }], 
+        movingAvgs: [{ name: 'Gathering live data...', value: '--', action: 'Neutral', weight: 0 }],
+        regime: { isChoppy: false, lowVolume: false }
+      };
+    }
+
+    const closePrices = realCandles.map(c => c.close);
+    const highPrices = realCandles.map(c => c.high);
+    const lowPrices = realCandles.map(c => c.low);
+    const volumes = realCandles.map(c => c.volume);
+
+    // Regime Filters
+    const recentVols = volumes.slice(-20);
+    const avgVol = recentVols.reduce((a, b) => a + b, 0) / 20;
+    const currentVol = volumes[volumes.length - 1];
+    // Intraday current candle is forming, so we check if it's at least 60% of average to not trigger false alarms constantly
+    const lowVolume = currentVol < (avgVol * 0.6);
+
+    const adx14 = ADX.calculate({ period: 14, high: highPrices, low: lowPrices, close: closePrices }).pop() || { adx: 20 };
+    const isChoppy = adx14.adx < 20;
+
+    // Real Oscillators
+    const rsi14 = RSI.calculate({ period: 14, values: closePrices }).pop() || 50;
+    const macd12_26 = MACD.calculate({ fastPeriod: 12, slowPeriod: 26, signalPeriod: 9, SimpleMAOscillator: false, SimpleMASignal: false, values: closePrices }).pop() || { MACD: 0, signal: 0 };
+    const stoch = Stochastic.calculate({ period: 14, signalPeriod: 3, high: highPrices, low: lowPrices, close: closePrices }).pop() || { k: 50, d: 50 };
+    const cci20 = CCI.calculate({ period: 20, high: highPrices, low: lowPrices, close: closePrices }).pop() || 0;
+    const ao = AwesomeOscillator.calculate({ high: highPrices, low: lowPrices, fastPeriod: 5, slowPeriod: 34 }).pop() || 0;
+
+    const getOscAction = (val, buyThresh, sellThresh, inverse = false) => {
+      if (!inverse) {
+        if (val > buyThresh) return 'Buy';
+        if (val < sellThresh) return 'Sell';
+        return 'Neutral';
+      } else {
+        if (val < buyThresh) return 'Buy';
+        if (val > sellThresh) return 'Sell';
+        return 'Neutral';
+      }
+    };
+
     const oscillators = [
-      { name: 'Relative Strength Index (14)', value: (55 + Math.random() * 15).toFixed(2), action: 'Neutral' },
-      { name: 'Stochastic %K (14,3,3)', value: (72 + Math.random() * 10).toFixed(2), action: 'Buy' },
-      { name: 'Commodity Channel Index (20)', value: (85 + Math.random() * 30).toFixed(2), action: 'Buy' },
-      { name: 'Average Directional Index (14)', value: (28 + Math.random() * 10).toFixed(2), action: 'Neutral' },
-      { name: 'Awesome Oscillator', value: (3 + Math.random() * 5).toFixed(2), action: 'Buy' },
-      { name: 'Momentum (10)', value: (p * 0.06).toFixed(2), action: 'Buy' },
-      { name: 'MACD Level (12, 26)', value: (2 + Math.random() * 6).toFixed(2), action: 'Buy' },
-      { name: 'Stochastic RSI Fast (3,3,14,14)', value: (90 + Math.random() * 10).toFixed(2), action: 'Neutral' },
-      { name: 'Williams Percent Range (14)', value: (-5 - Math.random() * 10).toFixed(2), action: 'Neutral' },
-      { name: 'Bull Bear Power', value: (p * 0.05).toFixed(2), action: 'Neutral' },
-      { name: 'Ultimate Oscillator (7,14,28)', value: (62 + Math.random() * 10).toFixed(2), action: 'Neutral' },
+      { name: 'Relative Strength Index (14)', value: rsi14.toFixed(2), action: getOscAction(rsi14, 60, 40), weight: 2 },
+      { name: 'Stochastic %K (14,3,3)', value: stoch.k.toFixed(2), action: getOscAction(stoch.k, 20, 80, true), weight: 1 },
+      { name: 'Commodity Channel Index (20)', value: cci20.toFixed(2), action: getOscAction(cci20, 100, -100), weight: 1 },
+      { name: 'Average Directional Index (14)', value: adx14.adx.toFixed(2), action: adx14.adx > 25 ? 'Buy' : 'Neutral', weight: 2 },
+      { name: 'Awesome Oscillator', value: ao.toFixed(2), action: ao > 0 ? 'Buy' : 'Sell', weight: 1 },
+      { name: 'MACD Level (12, 26)', value: macd12_26.MACD.toFixed(2), action: macd12_26.MACD > macd12_26.signal ? 'Buy' : 'Sell', weight: 2 },
     ];
+
+    // Real Moving Averages
+    const ema10 = EMA.calculate({ period: 10, values: closePrices }).pop() || p;
+    const sma10 = SMA.calculate({ period: 10, values: closePrices }).pop() || p;
+    const ema20 = EMA.calculate({ period: 20, values: closePrices }).pop() || p;
+    const sma20 = SMA.calculate({ period: 20, values: closePrices }).pop() || p;
+    const ema50 = EMA.calculate({ period: 50, values: closePrices }).pop() || p;
+    const sma50 = SMA.calculate({ period: 50, values: closePrices }).pop() || p;
+    const ema200 = EMA.calculate({ period: 200, values: closePrices }).pop() || p;
+    
+    const getMaAction = (maValue) => p > maValue ? 'Buy' : 'Sell';
+
     const movingAvgs = [
-      { name: 'Exponential Moving Average (10)', value: (p * 0.96).toFixed(2), action: 'Buy' },
-      { name: 'Simple Moving Average (10)', value: (p * 0.955).toFixed(2), action: 'Buy' },
-      { name: 'Exponential Moving Average (20)', value: (p * 0.95).toFixed(2), action: 'Buy' },
-      { name: 'Simple Moving Average (20)', value: (p * 0.948).toFixed(2), action: 'Buy' },
-      { name: 'Exponential Moving Average (30)', value: (p * 0.96).toFixed(2), action: 'Buy' },
-      { name: 'Simple Moving Average (30)', value: (p * 0.955).toFixed(2), action: 'Buy' },
-      { name: 'Exponential Moving Average (50)', value: (p * 0.968).toFixed(2), action: 'Buy' },
-      { name: 'Simple Moving Average (50)', value: (p * 0.966).toFixed(2), action: 'Buy' },
-      { name: 'Exponential Moving Average (100)', value: (p * 0.985).toFixed(2), action: 'Buy' },
-      { name: 'Simple Moving Average (100)', value: (p * 1.003).toFixed(2), action: 'Sell' },
-      { name: 'Exponential Moving Average (200)', value: (p * 0.99).toFixed(2), action: 'Buy' },
-      { name: 'Simple Moving Average (200)', value: (p * 1.002).toFixed(2), action: 'Sell' },
-      { name: 'Ichimoku Base Line (9,26,52,26)', value: (p * 0.953).toFixed(2), action: 'Neutral' },
-      { name: 'Volume Weighted MA (20)', value: (p * 0.948).toFixed(2), action: 'Buy' },
-      { name: 'Hull Moving Average (9)', value: (p * 0.993).toFixed(2), action: 'Buy' },
+      { name: 'Exponential Moving Average (10)', value: ema10.toFixed(2), action: getMaAction(ema10), weight: 1 },
+      { name: 'Simple Moving Average (10)', value: sma10.toFixed(2), action: getMaAction(sma10), weight: 1 },
+      { name: 'Exponential Moving Average (20)', value: ema20.toFixed(2), action: getMaAction(ema20), weight: 1 },
+      { name: 'Simple Moving Average (20)', value: sma20.toFixed(2), action: getMaAction(sma20), weight: 1 },
+      { name: 'Exponential Moving Average (50)', value: ema50.toFixed(2), action: getMaAction(ema50), weight: 2 },
+      { name: 'Simple Moving Average (50)', value: sma50.toFixed(2), action: getMaAction(sma50), weight: 2 },
+      { name: 'Exponential Moving Average (200)', value: ema200.toFixed(2), action: getMaAction(ema200), weight: 3 },
     ];
-    return { oscillators, movingAvgs };
+
+    return { oscillators, movingAvgs, regime: { isChoppy, lowVolume } };
   };
 
-  const { oscillators, movingAvgs } = computeIndicators();
-  const oscBuy = oscillators.filter(o => o.action === 'Buy').length;
-  const oscSell = oscillators.filter(o => o.action === 'Sell').length;
-  const oscNeutral = oscillators.filter(o => o.action === 'Neutral').length;
-  const maBuy = movingAvgs.filter(o => o.action === 'Buy').length;
-  const maSell = movingAvgs.filter(o => o.action === 'Sell').length;
-  const maNeutral = movingAvgs.filter(o => o.action === 'Neutral').length;
-  const totalBuy = oscBuy + maBuy, totalSell = oscSell + maSell, totalNeutral = oscNeutral + maNeutral;
+  const { oscillators, movingAvgs, regime } = computeIndicators();
+  
+  // Weighted Voting Logic
+  const calculateWeights = (data) => {
+    let buy = 0, sell = 0, neutral = 0;
+    data.forEach(ind => {
+      if (ind.action === 'Buy') buy += ind.weight;
+      else if (ind.action === 'Sell') sell += ind.weight;
+      else neutral += ind.weight;
+    });
+    return { buy, sell, neutral };
+  };
+
+  const oscWeights = calculateWeights(oscillators);
+  const maWeights = calculateWeights(movingAvgs);
+  const totalBuy = oscWeights.buy + maWeights.buy;
+  const totalSell = oscWeights.sell + maWeights.sell;
+  const totalNeutral = oscWeights.neutral + maWeights.neutral;
+
+  // Confidence Score Calculation: BuyWeight / (BuyWeight + SellWeight)
+  const calculateConfidence = (b, s) => {
+    if (b === 0 && s === 0) return 50;
+    return Math.round((b / (b + s)) * 100);
+  };
 
   const getVerdict = (b, s, n) => {
-    if (b > s + n) return { verdict: 'Strong Buy', value: 90 };
-    if (b > s) return { verdict: 'Buy', value: 72 };
-    if (s > b + n) return { verdict: 'Strong Sell', value: 10 };
-    if (s > b) return { verdict: 'Sell', value: 28 };
-    return { verdict: 'Neutral', value: 50 };
+    const confidence = calculateConfidence(b, s);
+    let verdict = 'Neutral';
+    let value = confidence; // Gauge value represents confidence
+
+    if (b === 0 && s === 0 && n === 0) {
+       verdict = 'Neutral'; value = 50;
+    } else if (b > s * 1.5) {
+       verdict = 'Strong Buy';
+    } else if (b > s) {
+       verdict = 'Buy';
+    } else if (s > b * 1.5) {
+       verdict = 'Strong Sell'; value = 100 - confidence; // Inverse for gauge
+    } else if (s > b) {
+       verdict = 'Sell'; value = 100 - confidence;
+    }
+
+    return { verdict, value, confidence };
   };
 
   const summary = getVerdict(totalBuy, totalSell, totalNeutral);
-  const oscVerdict = getVerdict(oscBuy, oscSell, oscNeutral);
-  const maVerdict = getVerdict(maBuy, maSell, maNeutral);
+  const oscVerdict = getVerdict(oscWeights.buy, oscWeights.sell, oscWeights.neutral);
+  const maVerdict = getVerdict(maWeights.buy, maWeights.sell, maWeights.neutral);
 
   const tabs = ['technicals', 'overview', 'news'];
 
@@ -263,6 +339,32 @@ export default function StockPage({ params }) {
         </span>
       </div>
 
+      {/* Master Verdict Panel & Risk Calculator */}
+      {!loading && (
+        <MasterVerdictPanel 
+          price={price} 
+          technicalSummary={{...summary, regime}} 
+          displaySymbol={displaySymbol} 
+        />
+      )}
+
+      {/* Intraday Chart with ORB & VWAP */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ActivityIcon size={18} color="var(--accent)" /> Intraday Pro Chart (5m) & Live Feed
+        </div>
+        <TradingChart symbol={symbol} onDataReady={(data) => {
+          setRealCandles(data);
+          // If quote isn't loaded or is stale, we can optionally update price here
+          if (data && data.length > 0) {
+            const latest = data[data.length - 1];
+            if (!quote || quote.regularMarketPrice !== latest.close) {
+               setQuote(prev => prev ? { ...prev, regularMarketPrice: latest.close } : null);
+            }
+          }
+        }} />
+      </div>
+
       {/* Tabs */}
       <div style={{
         display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 28,
@@ -290,9 +392,9 @@ export default function StockPage({ params }) {
             gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
             gap: 20, marginBottom: 32,
           }}>
-            <TechnicalGauge title="Oscillators" value={oscVerdict.value} verdict={oscVerdict.verdict} sell={oscSell} neutral={oscNeutral} buy={oscBuy} />
+            <TechnicalGauge title="Oscillators" value={oscVerdict.value} verdict={oscVerdict.verdict} sell={oscWeights.sell} neutral={oscWeights.neutral} buy={oscWeights.buy} />
             <TechnicalGauge title="Summary" value={summary.value} verdict={summary.verdict} sell={totalSell} neutral={totalNeutral} buy={totalBuy} />
-            <TechnicalGauge title="Moving Averages" value={maVerdict.value} verdict={maVerdict.verdict} sell={maSell} neutral={maNeutral} buy={maBuy} />
+            <TechnicalGauge title="Moving Averages" value={maVerdict.value} verdict={maVerdict.verdict} sell={maWeights.sell} neutral={maWeights.neutral} buy={maWeights.buy} />
           </div>
 
           {/* Tables */}

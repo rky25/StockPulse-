@@ -599,6 +599,7 @@ const Trading = {
     return {
       type: isBuy ? 'BUY' : 'SELL', entry: price, sl: +sl.toFixed(2), risk: +risk.toFixed(2),
       target1: +t1.toFixed(2), target2: +t2.toFixed(2), target3: +t3.toFixed(2),
+      bookProfit: +t1.toFixed(2), stretchTarget: +t2.toFixed(2),
       qty, capital, riskPct, riskBudget: +riskBudget.toFixed(2), positionValue: +(qty * price).toFixed(2),
       vixDesc: vixAdj.desc, vixSizeMult: vixAdj.sizeMult
     };
@@ -676,19 +677,19 @@ const Trading = {
     if (nearLevel) {
       if (isVolumeSpike) {
         if (nearLevel === 'DAY HIGH' && isBullishCandle) {
-          action = 'BUY NOW';
+          action = 'BUY TRIGGER';
           msg = `🚀 DAY HIGH BREAKOUT: Massive volume pushing through the high of the day!`;
           intensity = 3;
         } else if (nearLevel === 'DAY LOW' && isBearishCandle) {
-          action = 'SELL NOW';
+          action = 'SELL TRIGGER';
           msg = `🩸 DAY LOW BREAKDOWN: Massive volume crashing through the low of the day!`;
           intensity = 3;
         } else if (isBullishCandle && bounceType === 'SUPPORT') {
-          action = 'BUY NOW';
+          action = 'BUY TRIGGER';
           msg = `🔥 BUYERS STEPPING IN: Strong volume rejection at ${nearLevel} support.`;
           intensity = 3;
         } else if (isBearishCandle && bounceType === 'RESISTANCE') {
-          action = 'SELL NOW';
+          action = 'SELL TRIGGER';
           msg = `🚨 SELLERS STEPPING IN: Strong volume rejection at ${nearLevel} resistance.`;
           intensity = 3;
         } else if (isBullishCandle && bounceType === 'RESISTANCE') {
@@ -829,7 +830,7 @@ const Trading = {
 
       const entryPrice = opens[i + 1] ?? closes[i + 1];
       if (entryPrice == null) continue;
-      const setup = this.calcEntryExit(entryPrice, analysis.atr, analysis.overall, analysis.pivots);
+      const setup = this.calcEntryExit(entryPrice, analysis.atr, analysis.overall, analysis.pivots, 100000, 1, vixValue);
       if (!setup) continue;
 
       const entryDay = this.getISTDayKey(timestamps[i + 1]);
@@ -858,8 +859,8 @@ const Trading = {
             exitIndex = j;
             break;
           }
-          if (candleHigh >= setup.target2) {
-            exitPrice = setup.target2;
+          if (candleHigh >= setup.bookProfit) {
+            exitPrice = setup.bookProfit;
             exitReason = 'TARGET';
             exitIndex = j;
             break;
@@ -871,8 +872,8 @@ const Trading = {
             exitIndex = j;
             break;
           }
-          if (candleLow <= setup.target2) {
-            exitPrice = setup.target2;
+          if (candleLow <= setup.bookProfit) {
+            exitPrice = setup.bookProfit;
             exitReason = 'TARGET';
             exitIndex = j;
             break;
@@ -905,7 +906,7 @@ const Trading = {
         entry: +setup.entry.toFixed(2),
         exit: +(+exitPrice).toFixed(2),
         sl: setup.sl,
-        target: setup.target2,
+        target: setup.bookProfit,
         confidence: analysis.confidence,
         reason: exitReason,
         grossPnl: +grossPnl.toFixed(2),

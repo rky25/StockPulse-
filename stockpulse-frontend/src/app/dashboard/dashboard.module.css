@@ -6,7 +6,7 @@
 
 /* Sidebar */
 .sidebar {
-  width: 240px;
+  width: 80px;
   background: var(--bg-surface);
   border-right: 1px solid var(--border);
   display: flex;
@@ -17,14 +17,32 @@
   left: 0;
   bottom: 0;
   z-index: 100;
-  transition: transform 0.3s ease;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+  overflow-x: hidden;
+  white-space: nowrap;
+}
+
+.sidebar:hover {
+  width: 240px;
+}
+
+.hideOnCollapse {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar:hover .hideOnCollapse {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.1s;
 }
 
 .sidebarLogo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px 24px;
+  gap: 16px;
+  padding: 0 24px 24px;
   font-family: var(--font-heading);
   font-size: 1.3rem;
   font-weight: 700;
@@ -42,27 +60,32 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .sidebarNav {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 0 12px;
+  padding: 0 16px;
   flex: 1;
 }
 
 .sidebarLink {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 16px;
+  padding: 12px 15px;
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
   font-weight: 500;
   color: var(--text-muted);
   text-decoration: none;
   transition: all 0.15s;
+}
+
+.sidebarLink svg {
+  flex-shrink: 0;
 }
 
 .sidebarLink:hover {
@@ -76,15 +99,37 @@
 }
 
 .sidebarBottom {
-  padding: 16px 20px;
+  padding: 16px;
   border-top: 1px solid var(--border);
+}
+
+.sidebarUserContainer {
+  position: relative;
+  width: 100%;
 }
 
 .sidebarUser {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 16px;
   font-size: 0.85rem;
+  padding: 8px 15px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.sidebarUser:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.sidebarUserInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
 }
 
 .userAvatar {
@@ -98,13 +143,66 @@
   font-weight: 700;
   font-size: 0.8rem;
   color: white;
+  flex-shrink: 0;
+}
+
+.userMenu {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  padding: 8px 0;
+  z-index: 10;
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.userMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.userMenuItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.userMenuItem.danger {
+  color: var(--red);
+}
+
+.userMenuItem.danger:hover {
+  background: rgba(244, 67, 54, 0.1);
 }
 
 /* Main Content */
 .main {
   flex: 1;
-  margin-left: 240px;
+  margin-left: 80px;
   min-height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar:hover ~ .main {
+  margin-left: 240px;
 }
 
 /* Top Bar */
@@ -129,6 +227,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   min-width: 300px;
+  position: relative;
 }
 
 .searchBox input {
@@ -141,6 +240,51 @@
 }
 
 .searchBox input::placeholder {
+  color: var(--text-muted);
+}
+
+.searchSuggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestionItem {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.suggestionSymbol {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.suggestionName {
+  font-size: 0.75rem;
   color: var(--text-muted);
 }
 
@@ -167,14 +311,22 @@
 .statusOpen { background: var(--green); }
 .statusClosed { background: var(--red); }
 
-/* Mobile sidebar toggle */
+/* Sidebar Toggle */
 .sidebarToggle {
   display: none;
+  align-items: center;
+  justify-content: center;
   padding: 8px;
   color: var(--text-primary);
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebarToggle:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* Mobile overlay */
@@ -188,7 +340,17 @@
 
 @media (max-width: 768px) {
   .sidebar {
+    width: 240px;
     transform: translateX(-100%);
+  }
+
+  .sidebar:hover {
+    width: 240px;
+  }
+
+  .hideOnCollapse {
+    opacity: 1;
+    visibility: visible;
   }
 
   .sidebarOpen {
@@ -204,12 +366,13 @@
   }
 
   .sidebarToggle {
-    display: block;
+    display: flex;
   }
 
   .searchBox {
     min-width: unset;
     flex: 1;
+    margin-left: 10px;
   }
 
   .topbar {

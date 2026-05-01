@@ -32,6 +32,8 @@ let analysisQueue = [];
 let masterQuoteTimer = null;
 let sniperTimer = null;
 let scannerResults = { buys: [], sells: [] };
+let scannerNiftyRaw = null;
+let scannerContextPromise = null;
 
 const dataStatus = { price: false, nifty: false, vix: false };
 function updateStatusDot(source, ok) {
@@ -50,9 +52,9 @@ function updateStatusDot(source, ok) {
 
 // ===== PAPER TRADING MANAGER =====
 const PaperTrade = {
-  KEY: 'stockpulse_paper_trades',
-  getAll() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch { return []; } },
-  save(t) { localStorage.setItem(this.KEY, JSON.stringify(t)); },
+  KEY: 'stockpulse_positions',
+  getAll() { return typeof Positions !== 'undefined' ? Positions.getAll() : []; },
+  save(t) { if (typeof Positions !== 'undefined') Positions.save(t); },
   add(trade) {
     const all = this.getAll();
     trade.id = Date.now().toString(36);
@@ -73,9 +75,9 @@ const PaperTrade = {
       if ((isBuy && currentPrice <= t.sl) || (!isBuy && currentPrice >= t.sl)) {
         t.exitPrice = t.sl; t.exitReason = 'SL'; t.status = 'CLOSED'; t.closedAt = new Date().toISOString(); changed = true;
       }
-      // Check T2
-      else if ((isBuy && currentPrice >= t.target2) || (!isBuy && currentPrice <= t.target2)) {
-        t.exitPrice = t.target2; t.exitReason = 'TARGET'; t.status = 'CLOSED'; t.closedAt = new Date().toISOString(); changed = true;
+      // Book profit at T1. T2/T3 stay as stretch targets for manual runners.
+      else if ((isBuy && currentPrice >= t.target1) || (!isBuy && currentPrice <= t.target1)) {
+        t.exitPrice = t.target1; t.exitReason = 'BOOK PROFIT'; t.status = 'CLOSED'; t.closedAt = new Date().toISOString(); changed = true;
       }
     });
     if (changed) this.save(all);
@@ -183,7 +185,14 @@ function updateMkt(){
   document.getElementById('mktDot').className='mkt-dot '+(o?'open':'closed');
   document.getElementById('mktLabel').textContent=o?'Open':'Closed';
 }
-document.addEventListener('DOMContentLoaded',()=>{updateMkt();setInterval(updateMkt,30000)});
+document.addEventListener('DOMContentLoaded',()=>{
+  paperMode = localStorage.getItem('stockpulse_paper_mode') === 'true';
+  updateMkt();
+  renderPaperDashboard();
+  renderSignalHistory();
+  renderTradeJournal();
+  setInterval(updateMkt,30000);
+});
 
 /* UI Helpers */
 
@@ -666,13 +675,13 @@ function renderCalc(c){
   const rows=[
     {cls:'sl',label:'SL',price:c.sl,pos:pct(c.sl)},
     {cls:'entry',label:'Entry',price:c.entry,pos:pct(c.entry)},
-    {cls:'t1',label:'T1',price:c.target1,pos:pct(c.target1)},
+    {cls:'t1',label:'Book',price:c.bookProfit || c.target1,pos:pct(c.bookProfit || c.target1)},
     {cls:'t2',label:'T2',price:c.target2,pos:pct(c.target2)},
     {cls:'t3',label:'T3',price:c.target3,pos:pct(c.target3)}
   ];
   if(c.type==='SELL')rows.reverse();
   let html=rows.map(r=>`<div class="calc-row ${r.cls}"><span class="calc-label">${r.label}</span><div class="calc-bar"><div class="calc-marker" style="left:${r.pos}%"></div></div><span class="calc-price">${fmt(r.price)}</span></div>`).join('');
-  html+=`<div class="calc-rr"><div class="rr-item">Risk/Share<strong>${fmt(c.risk)}</strong></div><div class="rr-item">R:R 1:1<strong>${fmt(c.target1)}</strong></div><div class="rr-item">R:R 1:2<strong>${fmt(c.target2)}</strong></div><div class="rr-item">R:R 1:3<strong>${fmt(c.target3)}</strong></div></div>`;
+  html+=`<div class="calc-rr"><div class="rr-item">Risk/Share<strong>${fmt(c.risk)}</strong></div><div class="rr-item">Book Profit<strong>${fmt(c.bookProfit || c.target1)}</strong></div><div class="rr-item">Stretch T2<strong>${fmt(c.target2)}</strong></div><div class="rr-item">Runner T3<strong>${fmt(c.target3)}</strong></div></div>`;
   html+=`<div class="plan-grid">
     <div class="plan-card"><span>Suggested Qty</span><strong>${c.qty}</strong><small>Based on ${c.riskPct}% risk</small></div>
     <div class="plan-card"><span>Risk Budget</span><strong>${fmt(c.riskBudget)}</strong><small>Capital ${fmt(c.capital)}</small></div>
@@ -844,16 +853,16 @@ function renderPositions(price){
     let status='HOLD',statusClass='hold',statusMsg='Trend is intact, hold your position';
     if(isBuy&&price<=p.trailSL){status='EXIT NOW';statusClass='exit';statusMsg='Stop loss hit! Close position'}
     else if(!isBuy&&price>=p.trailSL){status='EXIT NOW';statusClass='exit';statusMsg='Stop loss hit! Close position'}
-    else if(isBuy&&price>=p.target1&&price<p.target2){status='T1 HIT - HOLD';statusClass='watch';statusMsg='Target 1 reached. Trail your SL'}
-    else if(!isBuy&&price<=p.target1&&price>p.target2){status='T1 HIT - HOLD';statusClass='watch';statusMsg='Target 1 reached. Trail your SL'}
-    else if((isBuy&&price>=p.target2)||((!isBuy)&&price<=p.target2)){status='T2 HIT - BOOK';statusClass='hold';statusMsg='Target 2 reached! Consider booking profit'}
+    else if(isBuy&&price>=p.target1&&price<p.target2){status='BOOK PROFIT';statusClass='watch';statusMsg='T1 reached. Book profit or trail only a small runner'}
+    else if(!isBuy&&price<=p.target1&&price>p.target2){status='BOOK PROFIT';statusClass='watch';statusMsg='T1 reached. Book profit or trail only a small runner'}
+    else if((isBuy&&price>=p.target2)||((!isBuy)&&price<=p.target2)){status='RUNNER TARGET';statusClass='hold';statusMsg='T2 reached. Tighten trailing stop'}
     const elapsed=Math.round((Date.now()-new Date(p.time).getTime())/60000);
 
     html+=`<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border2)">
       <div class="pos-head"><span class="pos-title">${p.type} Position</span><span class="pos-badge ${p.type.toLowerCase()}">${p.type} \u2022 ${p.qty} shares \u2022 ${elapsed}min</span></div>
       <div class="pos-pnl ${isProfit?'profit':'loss'}"><div class="pnl-amount">${isProfit?'+':''}\u20B9${pnl.toFixed(2)}</div><div class="pnl-pct">${isProfit?'+':''}${pnlPct.toFixed(2)}% on \u20B9${(p.entry*p.qty).toFixed(0)} invested</div></div>
       <div class="pos-status ${statusClass}">${status} \u2014 ${statusMsg}</div>
-      <div class="pos-levels"><div class="lv"><div class="lv-label">SL</div><div class="lv-val sl">${fmt(p.trailSL)}</div></div><div class="lv"><div class="lv-label">Entry</div><div class="lv-val">${fmt(p.entry)}</div></div><div class="lv"><div class="lv-label">T1</div><div class="lv-val t1">${fmt(p.target1)}</div></div><div class="lv"><div class="lv-label">T2</div><div class="lv-val t2">${fmt(p.target2)}</div></div><div class="lv"><div class="lv-label">T3</div><div class="lv-val t3">${fmt(p.target3)}</div></div></div>
+      <div class="pos-levels"><div class="lv"><div class="lv-label">SL</div><div class="lv-val sl">${fmt(p.trailSL)}</div></div><div class="lv"><div class="lv-label">Entry</div><div class="lv-val">${fmt(p.entry)}</div></div><div class="lv"><div class="lv-label">Book</div><div class="lv-val t1">${fmt(p.target1)}</div></div><div class="lv"><div class="lv-label">T2</div><div class="lv-val t2">${fmt(p.target2)}</div></div><div class="lv"><div class="lv-label">T3</div><div class="lv-val t3">${fmt(p.target3)}</div></div></div>
       <div class="pos-actions"><button class="btn-close-pos" onclick="closePosition('${p.id}', ${p.qty})">Close Position</button></div></div>`;
   });
   box.querySelector('.pos-content').innerHTML=html;
@@ -1344,12 +1353,20 @@ async function startMasterQuotePoller() {
 let sniperBusy = false;
 function initScanner() {
     if (!masterQuoteTimer) startMasterQuotePoller();
+    if (!scannerContextPromise) {
+        scannerContextPromise = fetchYahoo('https://query1.finance.yahoo.com/v8/finance/chart/%5ENSEI?range=5d&interval=15m')
+            .then(data => {
+                scannerNiftyRaw = data?.chart?.result?.[0] || null;
+                return scannerNiftyRaw;
+            })
+            .catch(() => null);
+    }
     
     if (sniperTimer) clearInterval(sniperTimer);
     sniperTimer = setInterval(processAnalysisQueue, 3500); // 3.5s between each analysis
 }
 
-function scannerAnalyzeChart(chartResult) {
+function scannerAnalyzeChart(chartResult, chart15m, niftyRaw) {
     // Extract arrays from Yahoo chart result and run the real Trading.analyze()
     const q = chartResult.indicators.quote[0];
     const ts = chartResult.timestamp || [];
@@ -1364,19 +1381,33 @@ function scannerAnalyzeChart(chartResult) {
     // Get previous day data for pivots
     const prevDayData = Trading.getPrevDayDataAt(ts, highs, lows, closes, closes.length - 1);
     
-    // Run the real analysis (without 15m/nifty context for speed, those are optional)
-    const result = Trading.analyze(ts, closes, highs, lows, vols, price, null, null, prevDayData, 0, {});
+    const lastTs = ts[ts.length - 1];
+    const trend15m = chart15m ? Trading.get15mTrend(Trading.getSeriesSliceAtOrBefore(chart15m, lastTs)) : null;
+    const niftyTrend = niftyRaw ? Trading.getNiftyTrend(Trading.getSeriesSliceAtOrBefore(niftyRaw, lastTs)) : null;
+    const result = Trading.analyze(ts, closes, highs, lows, vols, price, trend15m, niftyTrend, prevDayData, 0, {});
     
     if (!result) return null;
+    const plan = Trading.calcEntryExit(price, result.atr, result.overall, result.pivots);
+    const qualityScore = result.confidence
+        + (result.volumeOk ? 8 : 0)
+        + (result.regime === 'TRENDING' ? 6 : 0)
+        + (result.overall.includes('STRONG') ? 10 : 0)
+        + (trend15m === result.dominantSide ? 8 : 0)
+        + (niftyTrend === result.dominantSide ? 8 : 0);
     
     return {
         verdict: result.overall,
         confidence: result.confidence,
+        qualityScore,
         setupName: result.setup ? result.setup.name : 'Unknown',
         verdictReason: result.verdictReason,
         atr: result.atr,
         vwap: result.vwap,
-        regime: result.regime
+        regime: result.regime,
+        plan,
+        trend15m,
+        niftyTrend,
+        volRatio: result.volRatio
     };
 }
 
@@ -1388,11 +1419,15 @@ async function processAnalysisQueue() {
     const sym = item.symbol;
     
     try {
-        const res = await fetch(`http://localhost:8080/api/chart/${sym}?range=5d&interval=5m`);
-        const data = await res.json();
+        const [data, data15m] = await Promise.all([
+            fetch(`http://localhost:8080/api/chart/${sym}?range=5d&interval=5m`).then(r => r.json()),
+            fetch(`http://localhost:8080/api/chart/${sym}?range=1mo&interval=15m`).then(r => r.json()).catch(() => null),
+            scannerContextPromise
+        ]);
         if (data.chart && data.chart.result && data.chart.result[0]) {
             const chartData = data.chart.result[0];
-            const signal = scannerAnalyzeChart(chartData);
+            const chart15m = data15m?.chart?.result?.[0] || null;
+            const signal = scannerAnalyzeChart(chartData, chart15m, scannerNiftyRaw);
             
             if (!signal) { sniperBusy = false; return; }
             
@@ -1415,12 +1450,12 @@ async function processAnalysisQueue() {
             
             if (signal.verdict === 'STRONG BUY' || signal.verdict === 'BUY') {
                 scannerResults.buys.push(entry);
-                scannerResults.buys.sort((a, b) => b.signal.confidence - a.signal.confidence);
-                if (scannerResults.buys.length > 20) scannerResults.buys.length = 20;
+                scannerResults.buys.sort((a, b) => b.signal.qualityScore - a.signal.qualityScore);
+                if (scannerResults.buys.length > 10) scannerResults.buys.length = 10;
             } else if (signal.verdict === 'STRONG SELL' || signal.verdict === 'SELL') {
                 scannerResults.sells.push(entry);
-                scannerResults.sells.sort((a, b) => b.signal.confidence - a.signal.confidence);
-                if (scannerResults.sells.length > 20) scannerResults.sells.length = 20;
+                scannerResults.sells.sort((a, b) => b.signal.qualityScore - a.signal.qualityScore);
+                if (scannerResults.sells.length > 10) scannerResults.sells.length = 10;
             }
             renderScannerResults();
         }
@@ -1435,16 +1470,21 @@ function renderScannerResults() {
     const sList = document.getElementById('scanSellsList');
     if(!bList || !sList) return;
     
-    const renderCard = (item) => {
+    const renderCard = (item, index) => {
         const isBuy = item.signal.verdict.includes('BUY');
         const isStrong = item.signal.verdict.includes('STRONG');
         const pctColor = item.pct >= 0 ? 'var(--green)' : 'var(--red)';
         const pctText = (item.pct >= 0 ? '+' : '') + item.pct.toFixed(2) + '%';
+        const plan = item.signal.plan;
+        const planHtml = plan ? `<div class="sc-plan"><span>Entry <b>${fmt(plan.entry)}</b></span><span>SL <b>${fmt(plan.sl)}</b></span><span>Book <b>${fmt(plan.bookProfit || plan.target1)}</b></span></div>` : '';
+        const ageMin = Math.max(0, Math.floor((Date.now() - item.timestamp) / 60000));
+        const htf = `${item.signal.trend15m || '--'} / ${item.signal.niftyTrend || '--'}`;
+        const vol = item.signal.volRatio ? item.signal.volRatio.toFixed(1) + 'x' : '--';
         
         return `<div class="scan-card ${isStrong ? 'strong' : ''}" onclick="loadStock('${item.symbol}')">
             <div class="sc-top">
-                <span class="sc-sym">${item.symbol.replace('.NS','')}</span>
-                <span class="sc-time">${item.time}</span>
+                <span class="sc-sym"><b class="sc-rank">#${index + 1}</b>${item.symbol.replace('.NS','')}</span>
+                <span class="sc-time">${ageMin ? ageMin + 'm ago' : item.time}</span>
             </div>
             <div class="sc-mid">
                 <span class="sc-price">${fmt(item.price)}</span>
@@ -1454,16 +1494,18 @@ function renderScannerResults() {
                 <span class="sc-reason">${item.reason}</span>
                 <span class="sc-conf" style="color:${isBuy ? 'var(--green)' : 'var(--red)'}">${item.signal.confidence}%</span>
             </div>
+            ${planHtml}
+            <div class="sc-meta"><span>15m/Nifty ${htf}</span><span>Vol ${vol}</span></div>
             <div class="sc-setup">${item.signal.setupName} · ${item.signal.verdict}</div>
         </div>`;
     };
     
     bList.innerHTML = scannerResults.buys.length > 0 
-        ? scannerResults.buys.slice(0, 15).map(renderCard).join('') 
-        : '<div class="scan-empty">Scanning for buy signals...<br><span style="font-size:11px">The scanner checks breakouts, momentum, volume spikes & wide range stocks</span></div>';
+        ? scannerResults.buys.slice(0, 10).map(renderCard).join('') 
+        : '<div class="scan-empty">Scanning for top 10 buy signals...<br><span style="font-size:11px">The scanner checks breakouts, momentum, volume spikes & wide range stocks</span></div>';
     sList.innerHTML = scannerResults.sells.length > 0 
-        ? scannerResults.sells.slice(0, 15).map(renderCard).join('') 
-        : '<div class="scan-empty">Scanning for sell signals...<br><span style="font-size:11px">The scanner checks breakdowns, momentum, volume spikes & wide range stocks</span></div>';
+        ? scannerResults.sells.slice(0, 10).map(renderCard).join('') 
+        : '<div class="scan-empty">Scanning for top 10 sell signals...<br><span style="font-size:11px">The scanner checks breakdowns, momentum, volume spikes & wide range stocks</span></div>';
 }
 
 /* HELPERS */

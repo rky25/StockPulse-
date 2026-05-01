@@ -62,6 +62,22 @@
   margin: 0 auto;
 }
 
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+  margin-bottom: 24px;
+}
+
+.backButton:hover {
+  color: var(--text-primary);
+}
+
 .authLogo {
   display: flex;
   align-items: center;
@@ -324,3 +340,5 @@
     font-size: 1.5rem;
   }
 }
+
+

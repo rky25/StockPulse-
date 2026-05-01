@@ -3,7 +3,8 @@ export async function GET(request, { params }) {
   const apiPath = path.join('/');
   const { searchParams } = new URL(request.url);
   const queryString = searchParams.toString();
-  const backendUrl = `http://localhost:8080/api/${apiPath}${queryString ? '?' + queryString : ''}`;
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = `${backendBase}/api/${apiPath}${queryString ? '?' + queryString : ''}`;
 
   try {
     const res = await fetch(backendUrl, {
@@ -27,7 +28,8 @@ export async function GET(request, { params }) {
 export async function POST(request, { params }) {
   const { path } = await params;
   const apiPath = path.join('/');
-  const backendUrl = `http://localhost:8080/api/${apiPath}`;
+  const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = `${backendBase}/api/${apiPath}`;
 
   try {
     const body = await request.text();

@@ -20,6 +20,10 @@
   },
   "homepage": "https://github.com/rky25/Stock-Analysis#readme",
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^8.0.7",
+    "sqlite3": "^6.0.1"
   }
 }

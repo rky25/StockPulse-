@@ -17,6 +17,15 @@
     <div class="dropdown" id="dropdown"></div>
   </div>
   <div class="topbar-right">
+    <div class="status-indicator" id="dataStatus" title="Waiting for data">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-text" id="statusText">Offline</span>
+    </div>
+    <label class="paper-toggle" title="Track simulated positions only">
+      <input type="checkbox" id="paperModeToggle" onchange="togglePaperMode()">
+      <span class="paper-slider"></span>
+      <span class="paper-label">Paper</span>
+    </label>
     <div class="mkt-status"><span class="mkt-dot" id="mktDot"></span><span id="mktLabel">--</span></div>
     <button class="theme-btn" onclick="toggleTheme()"><span id="themeIcon">&#9790;</span></button>
   </div>
@@ -49,17 +58,17 @@
     <div class="scanner-header">
       <div class="sh-left">
         <h2>Top Opportunities</h2>
-        <p>Auto-researching all sectors in the background...</p>
+        <p>Ranked by confidence, volume, trend, and signal quality.</p>
       </div>
       <div class="scanner-progress">Scanning: <span id="scanCurrent">--</span></div>
     </div>
     <div class="scanner-columns">
       <div class="scan-col buys">
-        <h3><span class="dot green"></span> Top Buys</h3>
+        <h3><span class="dot green"></span> Top 10 Buys</h3>
         <div class="scan-list" id="scanBuysList"><div class="scan-empty">No strong buy signals yet...</div></div>
       </div>
       <div class="scan-col sells">
-        <h3><span class="dot red"></span> Top Sells</h3>
+        <h3><span class="dot red"></span> Top 10 Sells</h3>
         <div class="scan-list" id="scanSellsList"><div class="scan-empty">No strong sell signals yet...</div></div>
       </div>
     </div>
@@ -70,6 +79,18 @@
     <div class="price-header">
       <div class="ph-left"><h1 id="sName">--</h1><div class="sub" id="sSub">--</div></div>
       <div class="ph-right"><div class="ph-price" id="sPrice">--</div><span class="ph-change up" id="sChange">--</span></div>
+    </div>
+
+    <div class="regime-bar" id="regimeBar" style="display:none"></div>
+
+    <div class="orb-card" id="orbCard" style="display:none">
+      <div class="orb-header"><span class="orb-icon">OR</span><span class="orb-title">Opening Range</span></div>
+      <div class="orb-levels" id="orbLevels"></div>
+    </div>
+
+    <div class="section-card paper-dashboard" id="paperDashboard" style="display:none">
+      <h3>Paper Trading Dashboard</h3>
+      <div id="paperDashContent"></div>
     </div>
 
     <!-- HUGE ACTION BANNER -->
@@ -124,6 +145,10 @@
     <!-- Entry/Exit Calculator -->
     <div class="calc-section">
       <div class="sec-title" style="justify-content:space-between">Entry / Exit Calculator <span id="calcType" class="pos-badge buy">--</span></div>
+      <div class="risk-toolbar">
+        <div class="risk-input"><label>Capital</label><input type="number" id="capitalInput" value="100000" min="1000" step="1000"></div>
+        <div class="risk-input"><label>Risk %</label><input type="number" id="riskPctInput" value="1" min="0.1" max="5" step="0.1"></div>
+      </div>
       <div id="calcBody"></div>
       <div class="trade-form">
         <div class="sec-title" style="font-size:12px;margin-bottom:6px">Place a Trade (then track here)</div>
@@ -145,6 +170,13 @@
     <div class="two-col">
       <div class="section-card"><h3>Market Depth</h3><div id="depthBox"></div></div>
       <div class="section-card"><h3>Key Statistics</h3><div id="statsBox"></div></div>
+    </div>
+
+    <div class="section-card" id="backtestSection" style="display:none"></div>
+
+    <div class="two-col journal-grid">
+      <div class="section-card"><h3>Signal History</h3><div id="signalHistoryBox"></div></div>
+      <div class="section-card"><h3>Trade Journal</h3><div id="tradeJournalBox"></div></div>
     </div>
   </div>
 </div>

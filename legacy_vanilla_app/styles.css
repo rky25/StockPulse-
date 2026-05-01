@@ -106,7 +106,8 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
 .pos-status{text-align:center;padding:8px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;margin-bottom:10px}
 .pos-status.hold{background:var(--green-bg);color:var(--green)}
 .pos-status.exit{background:var(--red-bg);color:var(--red)}
-.pos-status.watch{background:var(--yellow-bg);color:var(--yellow)}
+.pos-status.watch{background:var(--yellow-bg);color:var(--yellow);animation:bookPulse 1.8s ease-in-out infinite}
+@keyframes bookPulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.22)}50%{box-shadow:0 0 0 8px rgba(245,158,11,0)}}
 .pos-actions{display:flex;gap:6px}
 .pos-actions button{flex:1;height:34px;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
 .btn-close-pos{background:var(--red);color:#fff}
@@ -185,12 +186,6 @@ canvas{width:100%;display:block}
 .plan-card span{display:block;font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.3px;text-transform:uppercase}
 .plan-card strong{display:block;font-size:18px;font-weight:800;margin:3px 0}
 .plan-card small{font-size:10px;color:var(--text2)}
-
-/* Trade form */
-.trade-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)}
-.tf-row{display:flex;gap:6px;margin-bottom:8px}
-.tf-row input,.tf-row select{flex:1;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;outline:none}
-.tf-row input:focus,.tf-row select:focus{border-color:var(--accent)}
 
 /* Trade form */
 .trade-form{margin-top:12px;padding-top:12px;border-top:1px solid var(--border2)}
@@ -366,7 +361,7 @@ canvas{width:100%;display:block}
 .paper-dash-card .pd-sub{font-size:10px;color:var(--text2);margin-top:2px;display:block}
 
 /* === TRADINGVIEW CHART CONTAINER === */
-#tvChartContainer{border-radius:var(--radius-sm);overflow:hidden}
+#tvChartContainer{border-radius:var(--radius-sm);overflow:hidden;height:clamp(300px,42vh,460px)!important}
 #tvChartContainer .tv-lightweight-charts{border-radius:var(--radius-sm)}
 
 /* === ULTRA-FAST PRICE FLASH === */
@@ -638,12 +633,14 @@ canvas{width:100%;display:block}
 .scan-col.buys h3{color:var(--green)}
 .scan-col.sells h3{color:var(--red)}
 .scan-list{display:flex;flex-direction:column;gap:8px}
-.scan-card{padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border2);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:4px}
+.scan-card{padding:10px 12px;border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border2);cursor:pointer;transition:.2s;display:flex;flex-direction:column;gap:4px;animation:scanCardIn .24s ease both}
 .scan-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
 .scan-card.strong{border-left:3px solid var(--green);background:rgba(0,208,156,.04)}
 .scan-col.sells .scan-card.strong{border-left-color:var(--red);background:rgba(255,82,82,.04)}
+@keyframes scanCardIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .sc-top{display:flex;justify-content:space-between;align-items:center}
-.sc-sym{font-weight:700;font-size:14px}
+.sc-sym{font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;min-width:0}
+.sc-rank{font-size:10px;color:var(--accent);background:var(--accent-bg);border:1px solid var(--border2);border-radius:6px;padding:2px 5px}
 .sc-time{font-size:10px;color:var(--text3);background:var(--card);padding:2px 6px;border-radius:8px;font-weight:600}
 .sc-mid{display:flex;justify-content:space-between;align-items:center}
 .sc-price{font-size:13px;font-weight:600}
@@ -651,6 +648,11 @@ canvas{width:100%;display:block}
 .sc-bot{display:flex;justify-content:space-between;align-items:center}
 .sc-reason{font-size:10px;color:var(--text2);font-weight:500;background:var(--card);padding:2px 6px;border-radius:6px}
 .sc-conf{font-size:14px;font-weight:800}
+.sc-plan{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:10px;color:var(--text2);border-top:1px solid var(--border2);padding-top:6px;margin-top:2px}
+.sc-plan span{display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:4px 5px;min-width:0}
+.sc-plan b{font-size:11px;color:var(--text);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-meta{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:var(--text3)}
+.sc-meta span{background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:3px 6px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sc-setup{font-size:10px;color:var(--text3);font-weight:500;border-top:1px solid var(--border2);padding-top:4px;margin-top:2px}
 .scan-empty{font-size:12px;color:var(--text3);text-align:center;padding:30px 0;font-style:italic;line-height:1.6}
 
