@@ -126,7 +126,7 @@ export default function DashboardOverview() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+      <div className={styles.dashboardGrid}>
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -238,14 +238,6 @@ export default function DashboardOverview() {
           )}
         </motion.div>
       </div>
-      
-      <style jsx>{`
-        @media (max-width: 1024px) {
-          div[style*="grid-template-columns: 2fr 1fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
