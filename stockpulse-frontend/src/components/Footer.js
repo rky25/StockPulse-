@@ -1,68 +1,68 @@
+'use client';
+
 import Link from 'next/link';
-import { Activity, Globe, Mail, ExternalLink, Play } from 'lucide-react';
+import { Activity, Code, Share2, Link2, Mail } from 'lucide-react';
 import styles from './Footer.module.css';
 
 export default function Footer() {
+  const year = new Date().getFullYear();
+
   return (
     <footer className={styles.footer}>
+      <div className={styles.gradientLine} />
       <div className="container">
         <div className={styles.footerGrid}>
+          {/* Brand */}
           <div className={styles.footerBrand}>
-            <Link href="/" className={styles.logo}>
+            <Link href="/" className={styles.footerLogo}>
               <div className={styles.logoIcon}>
                 <Activity size={18} color="white" />
               </div>
               Stock<span className={styles.logoAccent}>Pulse</span>
             </Link>
-            <p>
-              Professional-grade stock analysis with AI-powered signals, real-time charts, and institutional tools for Indian markets.
+            <p className={styles.footerDesc}>
+              Professional-grade stock analysis platform for Indian markets.
+              Real-time signals, AI insights, and institutional-grade tools.
             </p>
-            <div className={styles.socialLinks}>
-              <a href="#" className={styles.socialLink} aria-label="Website"><Globe size={16} /></a>
-              <a href="#" className={styles.socialLink} aria-label="Email"><Mail size={16} /></a>
-              <a href="#" className={styles.socialLink} aria-label="Links"><ExternalLink size={16} /></a>
-              <a href="#" className={styles.socialLink} aria-label="YouTube"><Play size={16} /></a>
+            <div className={styles.socials}>
+              <a href="#" className={styles.socialLink} aria-label="Twitter"><Share2 size={18} /></a>
+              <a href="#" className={styles.socialLink} aria-label="LinkedIn"><Link2 size={18} /></a>
+              <a href="#" className={styles.socialLink} aria-label="GitHub"><Code size={18} /></a>
+              <a href="#" className={styles.socialLink} aria-label="Email"><Mail size={18} /></a>
             </div>
           </div>
 
-          <div className={styles.footerColumn}>
+          {/* Links */}
+          <div className={styles.footerLinks}>
             <h4>Product</h4>
-            <ul>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#markets">Markets</a></li>
-              <li><Link href="/dashboard">Dashboard</Link></li>
-            </ul>
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#faq">FAQ</a>
+            <Link href="/signin">Dashboard</Link>
           </div>
 
-          <div className={styles.footerColumn}>
+          <div className={styles.footerLinks}>
             <h4>Company</h4>
-            <ul>
-              <li><a href="#">About Us</a></li>
-              <li><a href="#">Blog</a></li>
-              <li><a href="#">Careers</a></li>
-              <li><a href="#">Contact</a></li>
-            </ul>
+            <a href="#">About Us</a>
+            <a href="#">Blog</a>
+            <a href="#">Careers</a>
+            <a href="#">Contact</a>
           </div>
 
-          <div className={styles.footerColumn}>
+          <div className={styles.footerLinks}>
             <h4>Legal</h4>
-            <ul>
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Terms of Service</a></li>
-              <li><a href="#">Disclaimer</a></li>
-              <li><a href="#">Cookie Policy</a></li>
-            </ul>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Disclaimer</a>
+            <a href="#">Cookie Policy</a>
           </div>
         </div>
 
         <div className={styles.footerBottom}>
-          <p>© {new Date().getFullYear()} StockPulse. All rights reserved.</p>
-          <div className={styles.footerBottomLinks}>
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
-            <a href="#">Sitemap</a>
-          </div>
+          <p>&copy; {year} StockPulse. All rights reserved.</p>
+          <p className={styles.footerDisclaimer}>
+            Stock market investments are subject to market risk. Past performance does not guarantee future results.
+          </p>
         </div>
       </div>
     </footer>

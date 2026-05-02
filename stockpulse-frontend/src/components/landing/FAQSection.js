@@ -5,36 +5,71 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 
 const faqs = [
-  { q: 'What stocks are covered?', a: 'StockPulse covers all NIFTY 50 stocks plus popular mid-cap and sector stocks on NSE. We continuously add more based on user demand.' },
-  { q: 'How accurate are the trading signals?', a: 'Our signal engine achieves 85%+ confidence on backtested data. Signals combine RSI, MACD, ADX, volume analysis, and AI scoring. However, past performance does not guarantee future results.' },
-  { q: 'Is my data safe and secure?', a: 'Absolutely. We use encrypted connections, secure JWT authentication, and never store your financial data. Your analysis sessions are private and not shared.' },
-  { q: 'Can I use StockPulse on my phone?', a: 'Yes! StockPulse is fully responsive and works beautifully on all screen sizes — phones, tablets, and desktops. No app download needed.' },
-  { q: 'What\'s included in the free plan?', a: 'The free plan includes 5 stock signals per day, basic candlestick charts with 15-minute delayed data, and community access. Upgrade to Pro for real-time data and AI advisor.' },
-  { q: 'How does the AI Trading Advisor work?', a: 'Our AI advisor is powered by Llama 3.1 70B. It analyzes your selected stock\'s technical data in real-time and provides context-aware insights, answering any trading question you have.' },
+  {
+    q: 'Is StockPulse really free?',
+    a: 'Yes! Our free plan gives you access to real-time price data, basic technical indicators, and paper trading. No credit card required to get started.',
+  },
+  {
+    q: 'Which exchanges do you support?',
+    a: 'StockPulse currently supports NSE (National Stock Exchange) and BSE (Bombay Stock Exchange). We track 50+ major stocks including all NIFTY 50 companies.',
+  },
+  {
+    q: 'How accurate are the trading signals?',
+    a: 'Our signal engine uses a multi-indicator confluence system (VWAP, RSI, Supertrend, ADX, Bollinger Bands) and achieves 85%+ confidence on high-conviction signals. We always recommend using proper risk management.',
+  },
+  {
+    q: 'Can I use StockPulse for live trading?',
+    a: 'StockPulse provides analysis and signals — it does not execute trades directly. You can use our signals alongside your broker (Zerodha, Groww, Angel One, etc.) to make informed trading decisions.',
+  },
+  {
+    q: 'Is my data secure?',
+    a: 'Absolutely. We use industry-standard encryption, JWT authentication, and never store sensitive financial data. Your portfolio and watchlist data is stored securely and only accessible by you.',
+  },
+  {
+    q: 'Do you offer mobile apps?',
+    a: 'StockPulse is a fully responsive web application that works beautifully on all devices. Our PWA (Progressive Web App) can be installed on your phone for a native app-like experience.',
+  },
 ];
 
 export default function FAQSection() {
   const [open, setOpen] = useState(null);
 
   return (
-    <section id="faq" style={{ padding: '100px 0', background: 'var(--bg-surface)' }}>
-      <div className="container" style={{ maxWidth: 760 }}>
-        <div className="section-header">
-          <h2>Frequently Asked <span className="text-gradient">Questions</span></h2>
-          <p>Got questions? We have answers.</p>
-        </div>
+    <section id="faq" style={{
+      padding: '100px 0',
+      background: 'var(--bg-primary)',
+    }}>
+      <div className="container" style={{ maxWidth: '780px' }}>
+        <motion.div
+          className="section-header"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2>
+            Frequently Asked{' '}
+            <span className="text-gradient">Questions</span>
+          </h2>
+          <p>Everything you need to know about StockPulse.</p>
+        </motion.div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {faqs.map((faq, i) => (
             <motion.div
               key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.06 }}
               style={{
-                background: 'var(--bg-card)',
-                border: '1px solid',
-                borderColor: open === i ? 'var(--border-accent)' : 'var(--border)',
-                borderRadius: 'var(--radius-md)',
+                borderRadius: 'var(--radius-lg)',
+                background: open === i
+                  ? 'linear-gradient(135deg, rgba(41, 98, 255, 0.06) 0%, rgba(0, 188, 212, 0.03) 100%)'
+                  : 'linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+                border: `1px solid ${open === i ? 'rgba(41, 98, 255, 0.2)' : 'var(--border)'}`,
                 overflow: 'hidden',
-                transition: 'border-color 0.2s',
+                transition: 'all 0.3s ease',
               }}
             >
               <button
@@ -44,8 +79,8 @@ export default function FAQSection() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '18px 22px',
-                  fontSize: '0.95rem',
+                  padding: '20px 24px',
+                  fontSize: '1rem',
                   fontWeight: 600,
                   color: 'var(--text-primary)',
                   textAlign: 'left',
@@ -55,16 +90,13 @@ export default function FAQSection() {
                 }}
               >
                 {faq.q}
-                <ChevronDown
-                  size={18}
-                  style={{
-                    color: 'var(--text-muted)',
-                    transition: 'transform 0.3s',
-                    transform: open === i ? 'rotate(180deg)' : 'rotate(0)',
-                    flexShrink: 0,
-                    marginLeft: 12,
-                  }}
-                />
+                <motion.div
+                  animate={{ rotate: open === i ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ flexShrink: 0, color: 'var(--text-muted)' }}
+                >
+                  <ChevronDown size={18} />
+                </motion.div>
               </button>
 
               <AnimatePresence>
@@ -73,14 +105,13 @@ export default function FAQSection() {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    style={{ overflow: 'hidden' }}
+                    transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                   >
                     <div style={{
-                      padding: '0 22px 18px',
-                      fontSize: '0.9rem',
-                      color: 'var(--text-muted)',
+                      padding: '0 24px 20px',
+                      fontSize: '0.92rem',
                       lineHeight: 1.7,
+                      color: 'var(--text-secondary)',
                     }}>
                       {faq.a}
                     </div>

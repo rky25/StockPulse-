@@ -8,55 +8,93 @@ export default function CTASection() {
   return (
     <section style={{
       padding: '100px 0',
-      background: 'var(--bg-primary)',
       position: 'relative',
       overflow: 'hidden',
+      background: 'var(--bg-surface)',
     }}>
-      {/* Glow orbs */}
+      {/* Animated gradient background */}
       <div style={{
-        position: 'absolute', width: 500, height: 500,
-        background: 'radial-gradient(circle, rgba(41,98,255,0.12) 0%, transparent 70%)',
-        top: '-20%', left: '-10%', borderRadius: '50%',
-        filter: 'blur(60px)', pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute', width: 400, height: 400,
-        background: 'radial-gradient(circle, rgba(0,188,212,0.1) 0%, transparent 70%)',
-        bottom: '-20%', right: '-5%', borderRadius: '50%',
-        filter: 'blur(60px)', pointerEvents: 'none',
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(ellipse 80% 60% at 50% 50%, rgba(41, 98, 255, 0.08) 0%, transparent 70%)',
+        pointerEvents: 'none',
       }} />
 
-      <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+      {/* Floating particles */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              position: 'absolute',
+              width: 4 + Math.random() * 4,
+              height: 4 + Math.random() * 4,
+              borderRadius: '50%',
+              background: i % 2 === 0 ? 'var(--accent)' : 'var(--accent-cyan)',
+              opacity: 0.15 + Math.random() * 0.15,
+              left: `${10 + Math.random() * 80}%`,
+              top: `${10 + Math.random() * 80}%`,
+              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+              animationDelay: `${Math.random() * 3}s`,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="container" style={{ position: 'relative', zIndex: 1 }}>
         <motion.div
-          style={{ textAlign: 'center', maxWidth: 650, margin: '0 auto' }}
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.7 }}
+          style={{
+            textAlign: 'center',
+            maxWidth: '650px',
+            margin: '0 auto',
+          }}
         >
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '6px 16px', borderRadius: 'var(--radius-full)',
-            background: 'rgba(41,98,255,0.08)', border: '1px solid rgba(41,98,255,0.15)',
-            fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-light)',
-            marginBottom: 24,
-          }}>
-            <Sparkles size={14} /> Join 500+ Indian Traders
-          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 16px',
+              borderRadius: 'var(--radius-full)',
+              background: 'rgba(41, 98, 255, 0.1)',
+              border: '1px solid rgba(41, 98, 255, 0.2)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              color: 'var(--accent-light)',
+              marginBottom: 24,
+            }}
+          >
+            <Sparkles size={14} /> No credit card required
+          </motion.div>
 
-          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', marginBottom: 16 }}>
             Ready to Trade{' '}
-            <span className="text-gradient">Smarter?</span>
+            <span className="text-gradient">Smarter</span>?
           </h2>
 
-          <p style={{ fontSize: '1.1rem', color: 'var(--text-secondary)', marginBottom: 36, lineHeight: 1.7 }}>
-            Stop guessing. Start analyzing with institutional-grade tools built for 
-            the Indian stock market. Create your free account today.
+          <p style={{
+            fontSize: '1.1rem',
+            color: 'var(--text-secondary)',
+            marginBottom: 36,
+            lineHeight: 1.7,
+          }}>
+            Join thousands of Indian traders using institutional-grade analysis tools.
+            Start free — upgrade anytime.
           </p>
 
-          <Link href="/signup" className="btn btn-primary btn-lg" style={{ gap: 10 }}>
-            Get Started Free <ArrowRight size={18} />
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+            <Link href="/signup" className="btn btn-primary btn-lg" style={{ position: 'relative' }}>
+              Get Started Free <ArrowRight size={18} />
+            </Link>
+          </div>
         </motion.div>
       </div>
     </section>

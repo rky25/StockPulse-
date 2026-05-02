@@ -1,61 +1,97 @@
+/* ============================================
+   Features Section — Premium Cards
+   ============================================ */
+
 .features {
   padding: 100px 0;
-  background: var(--bg-surface);
+  background: var(--bg-primary);
+  position: relative;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 20px;
 }
 
 .featureCard {
-  background: var(--bg-card);
+  position: relative;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 32px;
-  transition: all var(--transition-base);
-  cursor: default;
+  padding: 32px 28px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
 }
 
 .featureCard:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-accent);
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-glow);
+  border-color: rgba(41, 98, 255, 0.2);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 40px rgba(41, 98, 255, 0.06);
+}
+
+.cardGlow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.featureCard:hover .cardGlow {
+  opacity: 1;
 }
 
 .iconWrap {
   width: 52px;
   height: 52px;
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
-  background: rgba(41, 98, 255, 0.08);
-  color: var(--accent-light);
+  border: 1px solid;
   transition: all var(--transition-base);
+  position: relative;
+  z-index: 1;
 }
 
 .featureCard:hover .iconWrap {
-  background: var(--accent-gradient);
-  color: white;
+  transform: scale(1.08);
+  box-shadow: 0 0 20px currentColor;
 }
 
 .featureCard h3 {
   font-size: 1.15rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 10px;
-  color: var(--text-primary);
+  position: relative;
+  z-index: 1;
 }
 
 .featureCard p {
   font-size: 0.9rem;
-  color: var(--text-muted);
   line-height: 1.7;
+  color: var(--text-secondary);
+  position: relative;
+  z-index: 1;
 }
 
+.cardLine {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.featureCard:hover .cardLine {
+  opacity: 1;
+}
+
+/* Responsive */
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
@@ -66,7 +102,8 @@
   .grid {
     grid-template-columns: 1fr;
   }
-  .features {
-    padding: 60px 0;
+  
+  .featureCard {
+    padding: 24px 20px;
   }
 }

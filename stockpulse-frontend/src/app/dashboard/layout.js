@@ -1,251 +1,253 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import {
-  Activity, LayoutDashboard, Search, BarChart3,
-  Briefcase, Star, Settings, Menu, X, User, MoreVertical, LogOut
+import { 
+  Activity, 
+  Home, 
+  Search, 
+  Star, 
+  Briefcase, 
+  Settings, 
+  LogOut,
+  Bell,
+  Menu,
+  X,
+  ChevronRight
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
-const SEARCH_STOCKS = [
-  { symbol: 'RELIANCE', name: 'Reliance Industries Ltd.' },
-  { symbol: 'TCS', name: 'Tata Consultancy Services Ltd.' },
-  { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd.' },
-  { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd.' },
-  { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd.' },
-  { symbol: 'SBIN', name: 'State Bank of India' },
-  { symbol: 'INFY', name: 'Infosys Ltd.' },
-  { symbol: 'LICI', name: 'Life Insurance Corporation' },
-  { symbol: 'ITC', name: 'ITC Ltd.' },
-  { symbol: 'HINDUNILVR', name: 'Hindustan Unilever Ltd.' },
-  { symbol: 'LT', name: 'Larsen & Toubro Ltd.' },
-  { symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd.' },
-  { symbol: 'HCLTECH', name: 'HCL Technologies Ltd.' },
-  { symbol: 'MARUTI', name: 'Maruti Suzuki India Ltd.' },
-  { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical' },
-  { symbol: 'ADANIENT', name: 'Adani Enterprises Ltd.' },
-  { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank' },
-  { symbol: 'TITAN', name: 'Titan Company Ltd.' },
-  { symbol: 'ONGC', name: 'ONGC Ltd.' },
-  { symbol: 'TATAMOTORS', name: 'Tata Motors Ltd.' },
-  { symbol: 'NTPC', name: 'NTPC Ltd.' },
-  { symbol: 'AXISBANK', name: 'Axis Bank Ltd.' },
-  { symbol: 'DMART', name: 'Avenue Supermarts Ltd.' },
-  { symbol: 'ADANIGREEN', name: 'Adani Green Energy' },
-  { symbol: 'ADANIPORTS', name: 'Adani Ports & SEZ' },
-  { symbol: 'ULTRACEMCO', name: 'UltraTech Cement Ltd.' },
-  { symbol: 'ASIANPAINT', name: 'Asian Paints Ltd.' },
-  { symbol: 'COALINDIA', name: 'Coal India Ltd.' },
-  { symbol: 'BAJAJFINSV', name: 'Bajaj Finserv Ltd.' },
-  { symbol: 'BAJAJ-AUTO', name: 'Bajaj Auto Ltd.' },
-  { symbol: 'POWERGRID', name: 'Power Grid Corp' },
-  { symbol: 'NESTLEIND', name: 'Nestle India Ltd.' },
-  { symbol: 'WIPRO', name: 'Wipro Ltd.' },
-  { symbol: 'M&M', name: 'Mahindra & Mahindra' },
-  { symbol: 'IOC', name: 'Indian Oil Corp' },
-  { symbol: 'JIOFIN', name: 'Jio Financial Services' },
-  { symbol: 'HAL', name: 'Hindustan Aeronautics' },
-  { symbol: 'DLF', name: 'DLF Ltd.' },
-  { symbol: 'ADANIPOWER', name: 'Adani Power Ltd.' },
-  { symbol: 'JSWSTEEL', name: 'JSW Steel Ltd.' },
-  { symbol: 'TATASTEEL', name: 'Tata Steel Ltd.' },
-  { symbol: 'SIEMENS', name: 'Siemens Ltd.' },
-  { symbol: 'IRFC', name: 'Indian Railway Finance' },
-  { symbol: 'VBL', name: 'Varun Beverages Ltd.' },
-  { symbol: 'ZOMATO', name: 'Zomato Ltd.' },
-  { symbol: 'PIDILITIND', name: 'Pidilite Industries' },
-  { symbol: 'GRASIM', name: 'Grasim Industries Ltd.' },
-  { symbol: 'SBILIFE', name: 'SBI Life Insurance' },
-  { symbol: 'BEL', name: 'Bharat Electronics Ltd.' },
-  { symbol: 'LTIM', name: 'LTIMindtree Ltd.' }
-];
-
 export default function DashboardLayout({ children }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [userName, setUserName] = useState('Rajesh');
+  const [user, setUser] = useState(null);
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const menuRef = useRef(null);
-  const searchRef = useRef(null);
-  const pathname = usePathname();
+  const [marketStatus, setMarketStatus] = useState({ open: false, label: 'Checking...' });
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Load user from localStorage or sessionStorage
-    if (typeof window !== 'undefined') {
-      const userStr = localStorage.getItem('stockpulse_user') || sessionStorage.getItem('stockpulse_user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user.name) {
-            setUserName(user.name);
-          }
-        } catch (e) {
-          console.error("Failed to parse user");
-        }
-      }
+    // Check authentication
+    const token = localStorage.getItem('stockpulse_token') || sessionStorage.getItem('stockpulse_token');
+    const userDataStr = localStorage.getItem('stockpulse_user') || sessionStorage.getItem('stockpulse_user');
+    
+    if (!token || !userDataStr) {
+      router.push('/signin');
+      return;
     }
 
-    const handleSearchClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setShowSuggestions(false);
+    try {
+      setUser(JSON.parse(userDataStr));
+    } catch (e) {
+      console.error('Failed to parse user data');
+      router.push('/signin');
+    }
+
+    // Handle resize for sidebar
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
       }
     };
-    document.addEventListener("mousedown", handleSearchClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleSearchClickOutside);
+
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    
+    // Check market status (NSE hours: 9:15 AM to 3:30 PM IST)
+    checkMarketStatus();
+    const interval = setInterval(checkMarketStatus, 60000); // Check every minute
+    
+    // Handle Keyboard shortcuts
+    const handleKeyDown = (e) => {
+      // Cmd/Ctrl + K for search focus
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.getElementById('global-search')?.focus();
+      }
     };
-  }, []);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearInterval(interval);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [router]);
+
+  const checkMarketStatus = () => {
+    const now = new Date();
+    // Convert current time to IST
+    const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const istTime = new Date(utcTime + istOffset);
+    
+    const day = istTime.getDay();
+    const hours = istTime.getHours();
+    const minutes = istTime.getMinutes();
+    const timeValue = hours + minutes / 60;
+    
+    // NSE timings: Mon-Fri (1-5), 9:15 AM to 3:30 PM (9.25 to 15.5)
+    if (day >= 1 && day <= 5 && timeValue >= 9.25 && timeValue < 15.5) {
+      setMarketStatus({ open: true, label: 'Market Open' });
+    } else {
+      setMarketStatus({ open: false, label: 'Market Closed' });
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('stockpulse_token');
     localStorage.removeItem('stockpulse_user');
-    window.location.href = '/';
+    sessionStorage.removeItem('stockpulse_token');
+    sessionStorage.removeItem('stockpulse_user');
+    router.push('/signin');
   };
 
-  const links = [
-    { href: '/dashboard', icon: <LayoutDashboard size={18} />, label: 'Overview' },
-    { href: '/dashboard/stock/RELIANCE.NS', icon: <BarChart3 size={18} />, label: 'Terminal', prefix: '/dashboard/stock' },
-    { href: '/dashboard/watchlist', icon: <Star size={18} />, label: 'Watchlist', prefix: '/dashboard/watchlist' },
-    { href: '/dashboard/portfolio', icon: <Briefcase size={18} />, label: 'Portfolio', prefix: '/dashboard/portfolio' },
-    { href: '/dashboard/settings', icon: <Settings size={18} />, label: 'Settings', prefix: '/dashboard/settings' },
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/dashboard/stock/${searchQuery.trim().toUpperCase()}`);
+      setSearchQuery('');
+    }
+  };
+
+  const navItems = [
+    { label: 'Overview', icon: <Home size={20} />, path: '/dashboard' },
+    { label: 'Watchlist', icon: <Star size={20} />, path: '/dashboard/watchlist' },
+    { label: 'Portfolio', icon: <Briefcase size={20} />, path: '/dashboard/portfolio' },
+    { label: 'Settings', icon: <Settings size={20} />, path: '/dashboard/settings' },
   ];
 
-  const isMarketOpen = () => {
-    const now = new Date();
-    const h = now.getHours(), m = now.getMinutes();
-    const day = now.getDay();
-    return day >= 1 && day <= 5 && ((h === 9 && m >= 15) || (h > 9 && h < 15) || (h === 15 && m <= 30));
-  };
+  if (!user) return null; // Or a loading spinner
 
   return (
-    <div className={styles.dashboard}>
-      {/* Mobile overlay */}
-      <div
-        className={`${styles.sidebarOverlay} ${sidebarOpen ? styles.show : ''}`}
-        onClick={() => setSidebarOpen(false)}
-      />
+    <div className={styles.layout}>
+      {/* Sidebar Overlay for Mobile */}
+      {isMobileMenuOpen && (
+        <div 
+          className={styles.mobileOverlay} 
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
 
       {/* Sidebar */}
-      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}>
-        <Link href="/dashboard" className={styles.sidebarLogo}>
-          <div className={styles.sidebarLogoIcon}>
-            <Activity size={18} color="white" />
-          </div>
-          <span className={styles.hideOnCollapse}>
-            Stock<span className="text-gradient">Pulse</span>
-          </span>
-        </Link>
+      <aside className={`${styles.sidebar} ${isSidebarOpen ? '' : styles.sidebarCollapsed} ${isMobileMenuOpen ? styles.mobileOpen : ''}`}>
+        <div className={styles.sidebarHeader}>
+          <Link href="/dashboard" className={styles.logo}>
+            <div className={styles.logoIcon}>
+              <Activity size={18} color="white" />
+            </div>
+            {isSidebarOpen && <span>Stock<span className={styles.logoAccent}>Pulse</span></span>}
+          </Link>
+          
+          <button 
+            className={styles.collapseBtn}
+            onClick={() => setSidebarOpen(!isSidebarOpen)}
+          >
+            <Menu size={18} />
+          </button>
+          
+          {/* Mobile close button */}
+          <button 
+            className={styles.mobileCloseBtn}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-        <nav className={styles.sidebarNav}>
-          {links.map((link) => (
-            <Link
-              key={link.label}
-              href={link.href}
-              className={`${styles.sidebarLink} ${(link.prefix ? pathname.startsWith(link.prefix) : pathname === link.href) ? styles.sidebarLinkActive : ''}`}
-              onClick={() => setSidebarOpen(false)}
-            >
-              {link.icon}
-              <span className={styles.hideOnCollapse}>{link.label}</span>
-            </Link>
-          ))}
+        <nav className={styles.navMenu}>
+          {navItems.map((item) => {
+            const isActive = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+            return (
+              <Link 
+                key={item.path} 
+                href={item.path}
+                className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                title={!isSidebarOpen ? item.label : undefined}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <div className={styles.navIcon}>{item.icon}</div>
+                {isSidebarOpen && <span className={styles.navLabel}>{item.label}</span>}
+                {isSidebarOpen && isActive && (
+                  <motion.div layoutId="activeNavIndicator" className={styles.activeIndicator} />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className={styles.sidebarBottom}>
-          <div className={styles.sidebarUserContainer} ref={menuRef}>
-            <div 
-              className={styles.sidebarUser} 
-              onClick={(e) => {
-                e.stopPropagation();
-                setUserMenuOpen(prev => !prev);
-              }}
-            >
-              <div className={styles.sidebarUserInfo}>
-                <div className={styles.userAvatar}>{userName.charAt(0).toUpperCase()}</div>
-                <div className={styles.hideOnCollapse}>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{userName}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Free Plan</div>
-                </div>
-              </div>
-              <MoreVertical className={styles.hideOnCollapse} size={16} color="var(--text-muted)" style={{ pointerEvents: 'none' }} />
-            </div>
-
-            {userMenuOpen && (
-              <div className={styles.userMenu}>
-                <button className={styles.userMenuItem} onClick={() => router.push('/dashboard')}>
-                  <User size={16} /> Profile Settings
-                </button>
-                <button className={`${styles.userMenuItem} ${styles.danger}`} onClick={handleLogout}>
-                  <LogOut size={16} /> Log out
-                </button>
-              </div>
-            )}
-          </div>
+        <div className={styles.sidebarFooter}>
+          <button 
+            className={styles.logoutBtn} 
+            onClick={handleLogout}
+            title={!isSidebarOpen ? "Log Out" : undefined}
+          >
+            <LogOut size={20} />
+            {isSidebarOpen && <span>Log Out</span>}
+          </button>
         </div>
       </aside>
 
-      {/* Main */}
-      <div className={styles.main}>
-        <div className={styles.topbar}>
-          <button className={styles.sidebarToggle} onClick={() => setSidebarOpen(true)}>
-            <Menu size={22} />
-          </button>
-
-          <div className={styles.searchBox} ref={searchRef}>
-            <Search size={16} style={{ color: 'var(--text-muted)' }} />
-            <input 
-              placeholder="Search stocks... (e.g. RELIANCE, TCS)" 
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-            />
+      {/* Main Content Area */}
+      <div className={styles.mainContent}>
+        {/* Topbar */}
+        <header className={styles.topbar}>
+          <div className={styles.topbarLeft}>
+            <button 
+              className={styles.mobileMenuBtn}
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
             
-            {showSuggestions && searchQuery.trim() !== '' && (
-              <div className={styles.searchSuggestions}>
-                {SEARCH_STOCKS.filter(s => 
-                  s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                  s.name.toLowerCase().includes(searchQuery.toLowerCase())
-                ).slice(0, 8).map((stock) => (
-                  <div 
-                    key={stock.symbol} 
-                    className={styles.suggestionItem}
-                    onClick={() => {
-                      setSearchQuery('');
-                      setShowSuggestions(false);
-                      router.push(`/dashboard/stock/${stock.symbol}.NS`);
-                    }}
-                  >
-                    <span className={styles.suggestionSymbol}>{stock.symbol}</span>
-                    <span className={styles.suggestionName}>{stock.name}</span>
-                  </div>
-                ))}
-                {SEARCH_STOCKS.filter(s => 
-                  s.symbol.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                  s.name.toLowerCase().includes(searchQuery.toLowerCase())
-                ).length === 0 && (
-                  <div className={styles.suggestionItem} style={{ cursor: 'default' }}>
-                    <span className={styles.suggestionName}>No stocks found</span>
-                  </div>
-                )}
+            <form onSubmit={handleSearch} className={styles.searchForm}>
+              <div className={styles.searchWrapper}>
+                <Search size={18} className={styles.searchIcon} />
+                <input 
+                  id="global-search"
+                  type="text" 
+                  placeholder="Search stocks (e.g., RELIANCE)" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={styles.searchInput}
+                />
+                <div className={styles.searchShortcut}>
+                  <kbd>⌘</kbd> <kbd>K</kbd>
+                </div>
               </div>
-            )}
+            </form>
           </div>
 
           <div className={styles.topbarRight}>
             <div className={styles.marketStatus}>
-              <div className={`${styles.statusDot} ${isMarketOpen() ? styles.statusOpen : styles.statusClosed}`} />
-              {isMarketOpen() ? 'Market Open' : 'Market Closed'}
+              <span className={`${styles.statusDot} ${marketStatus.open ? styles.statusOpen : styles.statusClosed}`}></span>
+              <span className={styles.statusLabel}>{marketStatus.label}</span>
+            </div>
+            
+            <button className={styles.notificationBtn}>
+              <Bell size={20} />
+              <span className={styles.notificationBadge}></span>
+            </button>
+            
+            <div className={styles.userProfile}>
+              <div className={styles.avatar}>
+                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className={styles.userInfo}>
+                <span className={styles.userName}>{user.name}</span>
+                <span className={styles.userRole}>Pro Trader</span>
+              </div>
             </div>
           </div>
-        </div>
+        </header>
 
-        {children}
+        {/* Page Content */}
+        <main className={styles.pageContainer}>
+          {children}
+        </main>
       </div>
     </div>
   );

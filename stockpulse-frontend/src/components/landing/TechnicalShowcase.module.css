@@ -1,84 +1,137 @@
-.showcase {
-  padding: 100px 0;
-  background: var(--bg-primary);
-}
+/* ============================================
+   Technical Showcase — Animated Gauges
+   ============================================ */
 
-.gaugeRow {
+.showcaseGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
-  margin-top: 50px;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 24px;
 }
 
-.gaugeCard {
-  background: var(--bg-card);
+.gaugePanel,
+.indicatorsPanel {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 36px 24px 28px;
-  text-align: center;
-  transition: all var(--transition-base);
+  border-radius: var(--radius-xl);
+  padding: 32px;
 }
 
-.gaugeCard:hover {
-  border-color: var(--border-accent);
-  box-shadow: var(--shadow-glow);
-}
-
-.gaugeTitle {
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: var(--text-primary);
-}
-
-.gaugeSvg {
-  margin: 0 auto 12px;
-}
-
-.gaugeVerdict {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin: 8px 0 16px;
-}
-
-.verdictBuy { color: var(--accent-light); }
-.verdictStrongBuy { color: var(--green); }
-.verdictNeutral { color: var(--text-muted); }
-.verdictSell { color: var(--red); }
-
-.gaugeCounts {
+.gaugePanelHeader {
   display: flex;
-  justify-content: center;
-  gap: 28px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
 }
 
-.countItem {
-  text-align: center;
-}
-
-.countLabel {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-}
-
-.countValue {
+.gaugePanelHeader h3 {
   font-size: 1.1rem;
-  font-weight: 700;
-  font-family: var(--font-heading);
 }
 
-.countSell { color: var(--red); }
-.countNeutral { color: var(--text-muted); }
-.countBuy { color: var(--accent-light); }
+.verdictBadge {
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
 
+.gaugeCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.gaugeLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: -10px;
+}
+
+.gaugeScale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0 10px;
+  opacity: 0.7;
+}
+
+/* Indicators */
+.indicatorsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.indicatorRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 70px;
+  align-items: center;
+  gap: 12px;
+}
+
+.indLabel {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.indBar {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.indFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s ease;
+}
+
+.indVerdict {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+/* Moving Averages */
+.maList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.maRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.maRow:last-child {
+  border-bottom: none;
+}
+
+.maAction {
+  text-align: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-  .gaugeRow {
+  .showcaseGrid {
     grid-template-columns: 1fr;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
   }
 }

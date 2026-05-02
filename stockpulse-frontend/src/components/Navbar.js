@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Activity } from 'lucide-react';
+import { Activity, ArrowRight } from 'lucide-react';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -45,6 +45,7 @@ export default function Navbar() {
             {navItems.map((item) => (
               <a key={item.label} href={item.href} className={styles.navLink}>
                 {item.label}
+                <span className={styles.linkUnderline} />
               </a>
             ))}
           </div>
@@ -54,7 +55,7 @@ export default function Navbar() {
               Log In
             </Link>
             <Link href="/signup" className={styles.getStartedBtn}>
-              Get Started
+              Get Started <ArrowRight size={16} />
             </Link>
             <button
               className={`${styles.hamburger} ${mobileOpen ? styles.hamburgerOpen : ''}`}
@@ -69,24 +70,48 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* Mobile Menu */}
+      <div className={`${styles.mobileOverlay} ${mobileOpen ? styles.mobileOverlayOpen : ''}`} onClick={() => setMobileOpen(false)} />
       <div className={`${styles.mobileMenu} ${mobileOpen ? styles.mobileMenuOpen : ''}`}>
+        <div className={styles.mobileMenuHeader}>
+          <Link href="/" className={styles.logo} onClick={() => setMobileOpen(false)}>
+            <div className={styles.logoIcon}>
+              <Activity size={20} color="white" />
+            </div>
+            Stock<span className={styles.logoAccent}>Pulse</span>
+          </Link>
+          <button className={styles.mobileClose} onClick={() => setMobileOpen(false)}>
+            <X size={24} />
+          </button>
+        </div>
         {navItems.map((item) => (
           <a
             key={item.label}
             href={item.href}
-            className={styles.navLink}
+            className={styles.mobileLink}
             onClick={() => setMobileOpen(false)}
           >
             {item.label}
           </a>
         ))}
-        <Link href="/signin" className={styles.navLink} onClick={() => setMobileOpen(false)}>
-          Log In
-        </Link>
-        <Link href="/signup" className={styles.getStartedBtn} onClick={() => setMobileOpen(false)}>
-          Get Started Free
-        </Link>
+        <div className={styles.mobileActions}>
+          <Link href="/signin" className={styles.signInBtn} onClick={() => setMobileOpen(false)}>
+            Log In
+          </Link>
+          <Link href="/signup" className={styles.getStartedBtn} onClick={() => setMobileOpen(false)}>
+            Get Started Free <ArrowRight size={16} />
+          </Link>
+        </div>
       </div>
     </>
+  );
+}
+
+function X({ size }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
   );
 }

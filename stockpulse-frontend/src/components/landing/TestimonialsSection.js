@@ -1,148 +1,202 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Star, Quote } from 'lucide-react';
 
 const testimonials = [
   {
-    name: 'Arjun M.',
-    role: 'Swing Trader, Mumbai',
-    quote: 'StockPulse changed how I approach the markets. The technical gauges give me confidence before every trade. The AI advisor is like having a research analyst on call.',
-    metric: '₹2.4L+',
-    metricLabel: 'Paper Trading Profit',
+    name: 'Arun Sharma',
+    role: 'Day Trader, Mumbai',
+    avatar: 'AS',
     stars: 5,
+    text: 'StockPulse transformed my trading. The AI signals are incredibly accurate, and the real-time gauges save me hours of manual analysis.',
+    color: '#2962FF',
   },
   {
-    name: 'Priya S.',
-    role: 'Options Trader, Bangalore',
-    quote: 'The signal engine is remarkably accurate. I love how it shows oscillators, moving averages, and a summary verdict — just like TradingView but focused on NSE.',
-    metric: '89%',
-    metricLabel: 'Win Rate (3 months)',
+    name: 'Priya Patel',
+    role: 'Swing Trader, Bangalore',
+    avatar: 'PP',
     stars: 5,
+    text: 'The best stock analysis platform I\'ve used for Indian markets. The TradingView-style charts and backtesting tools are world-class.',
+    color: '#00BCD4',
   },
   {
-    name: 'Rahul K.',
-    role: 'Day Trader, Delhi',
-    quote: 'Finally a platform built for Indian markets! Real-time NIFTY data, clean charts, and the multi-stock scanner is a game-changer for finding breakout opportunities.',
-    metric: '50+',
-    metricLabel: 'Stocks Analyzed Daily',
+    name: 'Vikram Singh',
+    role: 'Portfolio Manager, Delhi',
+    avatar: 'VS',
     stars: 5,
+    text: 'We use StockPulse for our institutional desk. The multi-stock scanner and signal confidence scoring is exactly what professional traders need.',
+    color: '#7C4DFF',
+  },
+  {
+    name: 'Meera Joshi',
+    role: 'Retail Investor, Pune',
+    avatar: 'MJ',
+    stars: 4,
+    text: 'As a beginner, the AI advisor helped me understand market dynamics. The interface is intuitive and the paper trading feature is invaluable.',
+    color: '#00E676',
+  },
+  {
+    name: 'Rajesh Kumar',
+    role: 'Options Trader, Chennai',
+    avatar: 'RK',
+    stars: 5,
+    text: 'The signal engine\'s accuracy on NIFTY 50 stocks is outstanding. I\'ve improved my win rate significantly since switching to StockPulse.',
+    color: '#FFD740',
+  },
+  {
+    name: 'Anita Desai',
+    role: 'Financial Analyst, Hyderabad',
+    avatar: 'AD',
+    stars: 5,
+    text: 'StockPulse\'s technical analysis tools rival Bloomberg Terminal. The fact that this is free for retail traders is incredible.',
+    color: '#FF9100',
   },
 ];
 
 export default function TestimonialsSection() {
-  const [current, setCurrent] = useState(0);
+  const scrollRef = useRef(null);
+  const [isPaused, setIsPaused] = useState(false);
 
-  const next = () => setCurrent((prev) => (prev + 1) % testimonials.length);
-  const prev = () => setCurrent((prev) => (prev - 1 + testimonials.length) % testimonials.length);
-  const t = testimonials[current];
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    let animFrame;
+    let scrollPos = 0;
+    const speed = 0.5;
+
+    const scroll = () => {
+      if (!isPaused) {
+        scrollPos += speed;
+        const halfWidth = container.scrollWidth / 2;
+        if (scrollPos >= halfWidth) scrollPos = 0;
+        container.scrollLeft = scrollPos;
+      }
+      animFrame = requestAnimationFrame(scroll);
+    };
+
+    animFrame = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animFrame);
+  }, [isPaused]);
+
+  const allTestimonials = [...testimonials, ...testimonials];
 
   return (
-    <section style={{ padding: '100px 0', background: 'var(--bg-primary)' }}>
-      <div className="container" style={{ maxWidth: 800 }}>
-        <div className="section-header">
-          <h2>Loved by <span className="text-gradient">Traders</span></h2>
-          <p>See what traders across India are saying about StockPulse.</p>
-        </div>
+    <section style={{
+      padding: '100px 0',
+      background: 'var(--bg-primary)',
+      overflow: 'hidden',
+    }}>
+      <div className="container">
+        <motion.div
+          className="section-header"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2>
+            Trusted by{' '}
+            <span className="text-gradient">Traders Across India</span>
+          </h2>
+          <p>See what our community says about StockPulse.</p>
+        </motion.div>
+      </div>
 
-        <div style={{ position: 'relative' }}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={current}
-              initial={{ opacity: 0, x: 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -40 }}
-              transition={{ duration: 0.4 }}
-              style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-xl)',
-                padding: '40px 36px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{
-                fontSize: 'clamp(2rem, 4vw, 3rem)',
-                fontWeight: 800,
-                fontFamily: 'var(--font-heading)',
-                background: 'var(--accent-gradient)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                marginBottom: 4,
-              }}>
-                {t.metric}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 24, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {t.metricLabel}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 20 }}>
-                {Array(t.stars).fill(0).map((_, i) => (
-                  <Star key={i} size={16} fill="#FFD740" color="#FFD740" />
-                ))}
-              </div>
-
-              <p style={{
-                fontSize: '1.05rem',
-                color: 'var(--text-secondary)',
-                lineHeight: 1.8,
-                fontStyle: 'italic',
-                marginBottom: 24,
-                maxWidth: 600,
-                margin: '0 auto 24px',
-              }}>
-                &ldquo;{t.quote}&rdquo;
-              </p>
-
-              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '1rem' }}>{t.name}</div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{t.role}</div>
-            </motion.div>
-          </AnimatePresence>
-
-          <div style={{
-            display: 'flex', justifyContent: 'center', gap: 16, marginTop: 28, alignItems: 'center',
-          }}>
-            <button onClick={prev} style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'var(--text-secondary)',
-              transition: 'all 0.2s',
+      <div
+        ref={scrollRef}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        style={{
+          display: 'flex',
+          gap: '20px',
+          overflow: 'hidden',
+          padding: '10px 20px',
+          cursor: 'default',
+        }}
+      >
+        {allTestimonials.map((t, i) => (
+          <div
+            key={i}
+            style={{
+              minWidth: '360px',
+              maxWidth: '360px',
+              padding: '28px',
+              borderRadius: 'var(--radius-lg)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+              border: '1px solid var(--border)',
+              flexShrink: 0,
+              transition: 'all 0.3s ease',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = `${t.color}30`;
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = `0 8px 30px rgba(0,0,0,0.2), 0 0 30px ${t.color}08`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            {/* Quote icon */}
+            <div style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              color: t.color,
+              opacity: 0.15,
             }}>
-              <ChevronLeft size={18} />
-            </button>
+              <Quote size={40} />
+            </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              {testimonials.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  style={{
-                    width: current === i ? 24 : 8,
-                    height: 8,
-                    borderRadius: 4,
-                    background: current === i ? 'var(--accent)' : 'var(--border-light)',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                  }}
-                />
+            {/* Stars */}
+            <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
+              {Array.from({ length: t.stars }).map((_, si) => (
+                <Star key={si} size={16} fill="#FFD740" color="#FFD740" />
+              ))}
+              {Array.from({ length: 5 - t.stars }).map((_, si) => (
+                <Star key={si} size={16} color="var(--text-muted)" />
               ))}
             </div>
 
-            <button onClick={next} style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'var(--text-secondary)',
-              transition: 'all 0.2s',
+            <p style={{
+              fontSize: '0.92rem',
+              lineHeight: 1.7,
+              color: 'var(--text-secondary)',
+              marginBottom: 20,
+              position: 'relative',
+              zIndex: 1,
             }}>
-              <ChevronRight size={18} />
-            </button>
+              &ldquo;{t.text}&rdquo;
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: `linear-gradient(135deg, ${t.color}, ${t.color}80)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: '#fff',
+              }}>
+                {t.avatar}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{t.name}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{t.role}</div>
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </section>
   );
