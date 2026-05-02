@@ -50,6 +50,12 @@ export default function SignUpPage() {
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    // Move to step 3 to collect password. We will verify the OTP along with the password.
+    setStep(3);
+  };
+
+  const handleSetPassword = async (e) => {
+    e.preventDefault();
     setError('');
     setLoading(true);
 
@@ -59,34 +65,7 @@ export default function SignUpPage() {
       const res = await fetch(`${backendUrl}/api/auth/verify-signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp: otpCode }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setSuccess('Email verified!');
-        setStep(3);
-      } else {
-        setError(data.message || 'Invalid OTP');
-      }
-    } catch (err) {
-      setError('Connection error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSetPassword = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${backendUrl}/api/auth/set-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, otp: otpCode, password }),
       });
 
       const data = await res.json();
@@ -95,7 +74,12 @@ export default function SignUpPage() {
         setSuccess('Account created! Redirecting...');
         setTimeout(() => router.push('/signin'), 1500);
       } else {
-        setError(data.message || 'Failed to set password');
+        const errorMsg = data.error || data.message || 'Failed to set password';
+        setError(errorMsg);
+        // If the error was specifically about the OTP, send them back to the OTP step
+        if (errorMsg.toLowerCase().includes('otp')) {
+          setStep(2);
+        }
       }
     } catch (err) {
       setError('Connection error. Please try again.');
