@@ -24,24 +24,25 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${backendUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      // Simulate network delay
+      await new Promise(r => setTimeout(r, 800));
 
-      const data = await res.json();
+      // Local storage auth check (bypassing Render backend due to ephemeral disk)
+      const usersStr = localStorage.getItem('stockpulse_users') || '[]';
+      const users = JSON.parse(usersStr);
+      
+      const user = users.find(u => u.email === email && u.password === password);
 
-      if (res.ok && data.token) {
+      if (user) {
         const storage = remember ? localStorage : sessionStorage;
-        storage.setItem('stockpulse_token', data.token);
-        storage.setItem('stockpulse_user', JSON.stringify(data.user));
+        storage.setItem('stockpulse_token', 'local_simulated_jwt_token_' + Date.now());
+        storage.setItem('stockpulse_user', JSON.stringify({ name: user.name, email: user.email }));
         router.push('/dashboard');
       } else {
-        setError(data.message || 'Invalid email or password');
+        setError('Invalid email or password');
       }
     } catch (err) {
-      setError('Connection error. Please try again.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

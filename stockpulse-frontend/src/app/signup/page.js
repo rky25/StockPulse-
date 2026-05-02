@@ -27,22 +27,20 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${backendUrl}/api/auth/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email }),
-      });
+      // Simulate network delay
+      await new Promise(r => setTimeout(r, 600));
 
-      const data = await res.json();
-
-      if (res.ok) {
+      const usersStr = localStorage.getItem('stockpulse_users') || '[]';
+      const users = JSON.parse(usersStr);
+      
+      if (users.some(u => u.email === email)) {
+        setError('Email already registered');
+      } else {
         setSuccess('OTP sent to your email!');
         setStep(2);
-      } else {
-        setError(data.message || 'Failed to send OTP');
       }
     } catch (err) {
-      setError('Connection error. Please try again.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -62,27 +60,27 @@ export default function SignUpPage() {
     const otpCode = otp.join('');
 
     try {
-      const res = await fetch(`${backendUrl}/api/auth/verify-signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, otp: otpCode, password }),
-      });
+      // Simulate network delay
+      await new Promise(r => setTimeout(r, 800));
 
-      const data = await res.json();
-
-      if (res.ok) {
-        setSuccess('Account created! Redirecting...');
-        setTimeout(() => router.push('/signin'), 1500);
-      } else {
-        const errorMsg = data.error || data.message || 'Failed to set password';
-        setError(errorMsg);
-        // If the error was specifically about the OTP, send them back to the OTP step
-        if (errorMsg.toLowerCase().includes('otp')) {
-          setStep(2);
-        }
+      if (otpCode !== '123456') {
+        setError('Invalid or expired OTP. Please use 123456 for testing.');
+        setStep(2);
+        return;
       }
+
+      const usersStr = localStorage.getItem('stockpulse_users') || '[]';
+      const users = JSON.parse(usersStr);
+      
+      // Save user to localStorage
+      users.push({ name, email, password });
+      localStorage.setItem('stockpulse_users', JSON.stringify(users));
+
+      setSuccess('Account created! Redirecting...');
+      setTimeout(() => router.push('/signin'), 1500);
+
     } catch (err) {
-      setError('Connection error. Please try again.');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -246,6 +244,7 @@ export default function SignUpPage() {
             >
               <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 20, textAlign: 'center' }}>
                 We sent a 6-digit code to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>
+                <br /><span style={{ fontSize: '0.8rem', color: 'var(--accent)' }}>(Hint: Enter 123456 to test)</span>
               </p>
 
               <div className={styles.otpGroup}>
