@@ -2,27 +2,70 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Activity, ArrowRight, Bell } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, ArrowRight, Bell, Zap, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { SkeletonCard, SkeletonRow } from '@/components/Skeleton';
 import styles from './dashboard.module.css';
 
+const DEFAULT_WATCHLIST = ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS'];
+
+async function fetchQuote(symbol) {
+  try {
+    const res = await fetch(`/api/proxy/chart/${symbol}?interval=1d&range=1d`);
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta) return null;
+    const change = meta.regularMarketPrice - meta.chartPreviousClose;
+    return {
+      symbol: symbol.replace('.NS', ''),
+      fullSymbol: symbol,
+      name: meta.shortName || meta.symbol?.replace('.NS', ''),
+      price: meta.regularMarketPrice,
+      change: +change.toFixed(2),
+      changePct: +((change / meta.chartPreviousClose) * 100).toFixed(2),
+    };
+  } catch { return null; }
+}
+
 export default function DashboardOverview() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [nifty, setNifty] = useState(null);
+  const [bankNifty, setBankNifty] = useState(null);
+  const [movers, setMovers] = useState([]);
+  const [portfolioStats, setPortfolioStats] = useState({ value: 100000, pnl: 0 });
 
   useEffect(() => {
     const userDataStr = localStorage.getItem('stockpulse_user') || sessionStorage.getItem('stockpulse_user');
-    if (userDataStr) {
-      setUser(JSON.parse(userDataStr));
-    }
-    
-    // Simulate loading data
-    const timer = setTimeout(() => {
+    if (userDataStr) setUser(JSON.parse(userDataStr));
+
+    // Calculate portfolio from completed trades
+    try {
+      const completed = JSON.parse(localStorage.getItem('stockpulse_completed_trades') || '[]');
+      const active = JSON.parse(localStorage.getItem('stockpulse_active_trades') || '[]');
+      let totalPnl = 0;
+      completed.forEach(t => {
+        const pnl = (t.type === 'BUY' ? (t.exitPrice - t.entry) : (t.entry - t.exitPrice)) * t.qty;
+        totalPnl += pnl;
+      });
+      setPortfolioStats({ value: 100000 + totalPnl, pnl: totalPnl, activeCount: active.length });
+    } catch {}
+
+    // Fetch live index & stock data
+    const fetchAll = async () => {
+      const [n, bn, ...stockData] = await Promise.all([
+        fetchQuote('^NSEI'),
+        fetchQuote('^NSEBANK'),
+        ...DEFAULT_WATCHLIST.map(s => fetchQuote(s))
+      ]);
+      if (n) setNifty(n);
+      if (bn) setBankNifty(bn);
+      setMovers(stockData.filter(Boolean).sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct)));
       setLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
+    };
+    fetchAll();
+    const interval = setInterval(fetchAll, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const getGreeting = () => {
@@ -32,210 +75,113 @@ export default function DashboardOverview() {
     return 'Good Evening';
   };
 
-  const recentAlerts = [
-    { symbol: 'RELIANCE', type: 'Buy', price: '₹1,430.80', time: '10 mins ago', color: '#00E676' },
-    { symbol: 'TCS', type: 'Sell', price: '₹3,842.15', time: '1 hour ago', color: '#FF1744' },
-    { symbol: 'HDFCBANK', type: 'Buy', price: '₹1,678.30', time: '2 hours ago', color: '#00E676' },
-  ];
+  const IndexCard = ({ data, label, delay }) => {
+    if (!data) return <SkeletonCard />;
+    const isUp = data.change >= 0;
+    return (
+      <motion.div className={styles.statCard} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>{label}</div>
+          <div style={{ color: isUp ? 'var(--green)' : 'var(--red)', background: isUp ? 'var(--green-bg)' : 'var(--red-bg)', padding: '3px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 600 }}>
+            {isUp ? '+' : ''}{data.changePct}%
+          </div>
+        </div>
+        <div style={{ fontSize: '1.7rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 6 }}>
+          {data.price?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: isUp ? 'var(--green)' : 'var(--red)', fontSize: '0.82rem' }}>
+          {isUp ? <TrendingUp size={15} /> : <TrendingDown size={15} />} {isUp ? '+' : ''}{data.change} today
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div>
       <div className={styles.pageHeader}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1>{getGreeting()}, {user?.name?.split(' ')[0] || 'Trader'}</h1>
           <p>Here is your market overview for today.</p>
         </motion.div>
       </div>
 
-      {loading ? (
-        <div className={styles.statsGrid}>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      ) : (
-        <div className={styles.statsGrid}>
-          <motion.div 
-            className={styles.statCard}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>NIFTY 50</div>
-              <div style={{ color: 'var(--green)', background: 'var(--green-bg)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>+0.85%</div>
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 8 }}>22,453.30</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--green)', fontSize: '0.85rem' }}>
-              <TrendingUp size={16} /> +185.40 today
-            </div>
-          </motion.div>
-
-          <motion.div 
-            className={styles.statCard}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>BANK NIFTY</div>
-              <div style={{ color: 'var(--red)', background: 'var(--red-bg)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>-0.24%</div>
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 8 }}>47,832.10</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--red)', fontSize: '0.85rem' }}>
-              <TrendingDown size={16} /> -115.20 today
-            </div>
-          </motion.div>
-
-          <motion.div 
-            className={styles.statCard}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>Portfolio Value</div>
-              <div style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '4px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>Paper</div>
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 8 }}>₹1,04,250</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--green)', fontSize: '0.85rem' }}>
-              <TrendingUp size={16} /> +₹4,250 (4.25%)
-            </div>
-          </motion.div>
-
-          <motion.div 
-            className={styles.statCard}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 500 }}>Active Signals</div>
-              <Activity size={18} color="var(--accent-light)" />
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 8 }}>12</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-              Across watchlist
-            </div>
-          </motion.div>
-        </div>
-      )}
+      <div className={styles.statsGrid}>
+        <IndexCard data={nifty} label="NIFTY 50" delay={0.1} />
+        <IndexCard data={bankNifty} label="BANK NIFTY" delay={0.2} />
+        <motion.div className={styles.statCard} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>Portfolio Value</div>
+            <div style={{ color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '3px 8px', borderRadius: 4, fontSize: '0.72rem', fontWeight: 600 }}>Paper</div>
+          </div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 6 }}>
+            ₹{portfolioStats.value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: portfolioStats.pnl >= 0 ? 'var(--green)' : 'var(--red)', fontSize: '0.82rem' }}>
+            {portfolioStats.pnl >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
+            {portfolioStats.pnl >= 0 ? '+' : ''}₹{Math.abs(portfolioStats.pnl).toFixed(0)} ({((portfolioStats.pnl / 100000) * 100).toFixed(2)}%)
+          </div>
+        </motion.div>
+        <motion.div className={styles.statCard} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 500 }}>Active Trades</div>
+            <Activity size={17} color="var(--accent-light)" />
+          </div>
+          <div style={{ fontSize: '1.7rem', fontWeight: 700, fontFamily: 'var(--font-heading)', marginBottom: 6 }}>
+            {portfolioStats.activeCount || 0}
+          </div>
+          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Being tracked live</div>
+        </motion.div>
+      </div>
 
       <div className={styles.dashboardGrid}>
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <h3 style={{ fontSize: '1.1rem' }}>Top Movers</h3>
-            <Link href="/dashboard/watchlist" style={{ fontSize: '0.85rem', color: 'var(--accent-light)', display: 'flex', alignItems: 'center', gap: 4 }}>
-              View All <ArrowRight size={14} />
-            </Link>
+        {/* Top Movers */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 8 }}><Zap size={16} color="#FF9800" /> Top Movers</h3>
+            <Link href="/dashboard/watchlist" style={{ fontSize: '0.82rem', color: 'var(--accent-light)', display: 'flex', alignItems: 'center', gap: 4 }}>View All <ArrowRight size={13} /></Link>
           </div>
-          
-          {loading ? (
-            <div>
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>RE</div>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>RELIANCE</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Reliance Industries</div>
+          {loading ? <div><SkeletonRow /><SkeletonRow /><SkeletonRow /></div> : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {movers.slice(0, 5).map((s, i) => (
+                <Link key={i} href={`/dashboard/stock/${s.fullSymbol}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid var(--border)', textDecoration: 'none', color: 'inherit', transition: 'border-color 0.2s' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>{s.symbol.slice(0, 2)}</div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{s.symbol}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{s.name}</div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>₹1,430.80</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--green)', fontWeight: 500 }}>+2.45%</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>TC</div>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>TCS</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tata Consultancy Services</div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)', fontSize: '0.9rem' }}>₹{s.price?.toFixed(2)}</div>
+                    <div style={{ fontSize: '0.78rem', color: s.changePct >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 500 }}>{s.changePct > 0 ? '+' : ''}{s.changePct}%</div>
                   </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>₹3,842.15</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--green)', fontWeight: 500 }}>+1.80%</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(255, 255, 255, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>HD</div>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>HDFCBANK</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>HDFC Bank Ltd.</div>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>₹1,678.30</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--red)', fontWeight: 500 }}>-1.20%</div>
-                </div>
-              </div>
+                </Link>
+              ))}
             </div>
           )}
         </motion.div>
 
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-            <h3 style={{ fontSize: '1.1rem' }}>Recent Alerts</h3>
-            <Bell size={16} color="var(--text-muted)" />
-          </div>
-
-          {loading ? (
-             <div>
-               <SkeletonRow />
-               <SkeletonRow />
-             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {recentAlerts.map((alert, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 16, borderBottom: i !== recentAlerts.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                  <div style={{ 
-                    width: 32, 
-                    height: 32, 
-                    borderRadius: '50%', 
-                    background: `${alert.color}15`, 
-                    color: alert.color,
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    flexShrink: 0
-                  }}>
-                    {alert.type === 'Buy' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', marginBottom: 4 }}>
-                      <span style={{ color: alert.color, fontWeight: 700 }}>{alert.type}</span> signal for <strong>{alert.symbol}</strong> at {alert.price}
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{alert.time}</div>
-                  </div>
+        {/* Quick Actions */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.6 }}
+          style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px' }}>
+          <h3 style={{ fontSize: '1.05rem', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}><BarChart3 size={16} color="var(--accent)" /> Quick Actions</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { label: 'Stock Scanner', desc: 'Scan NIFTY stocks for signals', href: '/dashboard/scanner', icon: <Zap size={18} color="#FF9800" /> },
+              { label: 'Watchlist', desc: 'Your tracked stocks', href: '/dashboard/watchlist', icon: <Activity size={18} color="#00C853" /> },
+              { label: 'Portfolio', desc: 'Trade journal & P&L', href: '/dashboard/portfolio', icon: <BarChart3 size={18} color="#448AFF" /> },
+            ].map((item, i) => (
+              <Link key={i} href={item.href} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px', borderRadius: 8, border: '1px solid var(--border)', textDecoration: 'none', color: 'inherit', transition: 'all 0.2s', background: 'rgba(255,255,255,0.02)' }}>
+                <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{item.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.label}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{item.desc}</div>
                 </div>
-              ))}
-            </div>
-          )}
+                <ArrowRight size={16} color="var(--text-muted)" />
+              </Link>
+            ))}
+          </div>
         </motion.div>
       </div>
     </div>

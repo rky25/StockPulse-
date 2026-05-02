@@ -15,7 +15,8 @@ import {
   Bell,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Crosshair
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
@@ -117,6 +118,7 @@ export default function DashboardLayout({ children }) {
   const navItems = [
     { label: 'Overview', icon: <Home size={20} />, path: '/dashboard' },
     { label: 'Watchlist', icon: <Star size={20} />, path: '/dashboard/watchlist' },
+    { label: 'Scanner', icon: <Crosshair size={20} />, path: '/dashboard/scanner' },
     { label: 'Portfolio', icon: <Briefcase size={20} />, path: '/dashboard/portfolio' },
     { label: 'Settings', icon: <Settings size={20} />, path: '/dashboard/settings' },
   ];
