@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
-
+export default function CTASection() {
   const [particles, setParticles] = useState([]);
 
   useEffect(() => {
