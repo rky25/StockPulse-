@@ -165,7 +165,42 @@ export default function StockPage({ params }) {
     }
   }, [symbol, capital, riskPct, displaySymbol]);
 
-  useEffect(() => { runAnalysis(); }, [runAnalysis]);
+  /* Fast quote refresh (every 3s) */
+  const fetchFastQuote = useCallback(async () => {
+    try {
+      const data = await fetchChart(symbol, '1m', '1d');
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (meta) {
+        setQuote(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            regularMarketPrice: meta.regularMarketPrice,
+            regularMarketChange: +(meta.regularMarketPrice - meta.chartPreviousClose).toFixed(2),
+            regularMarketChangePercent: +(((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100).toFixed(2),
+            regularMarketDayHigh: meta.regularMarketDayHigh,
+            regularMarketDayLow: meta.regularMarketDayLow,
+            regularMarketVolume: meta.regularMarketVolume,
+          };
+        });
+      }
+    } catch (err) {
+      // silent fail for fast refresh
+    }
+  }, [symbol]);
+
+  useEffect(() => { 
+    runAnalysis(); 
+    
+    // Set intervals exactly like the legacy vanilla app
+    const fastTimer = setInterval(fetchFastQuote, 3000); // 3 seconds fast quote refresh
+    const slowTimer = setInterval(runAnalysis, 60000);   // 60 seconds full analysis refresh
+
+    return () => {
+      clearInterval(fastTimer);
+      clearInterval(slowTimer);
+    };
+  }, [runAnalysis, fetchFastQuote]);
 
   const price = quote?.regularMarketPrice || 0;
   const change = quote?.regularMarketChange || 0;

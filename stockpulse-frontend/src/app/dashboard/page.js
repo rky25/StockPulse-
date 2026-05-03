@@ -34,8 +34,14 @@ export default function DashboardOverview() {
   const [bankNifty, setBankNifty] = useState(null);
   const [movers, setMovers] = useState([]);
   const [portfolioStats, setPortfolioStats] = useState({ value: 100000, pnl: 0 });
+  const [greeting, setGreeting] = useState('Welcome');
 
   useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 17) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
+
     const userDataStr = localStorage.getItem('stockpulse_user') || sessionStorage.getItem('stockpulse_user');
     if (userDataStr) setUser(JSON.parse(userDataStr));
 
@@ -64,16 +70,11 @@ export default function DashboardOverview() {
       setLoading(false);
     };
     fetchAll();
-    const interval = setInterval(fetchAll, 30000);
+    const interval = setInterval(fetchAll, 8000); // 8 seconds global refresh
     return () => clearInterval(interval);
   }, []);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 17) return 'Good Afternoon';
-    return 'Good Evening';
-  };
+
 
   const IndexCard = ({ data, label, delay }) => {
     if (!data) return <SkeletonCard />;
@@ -100,7 +101,7 @@ export default function DashboardOverview() {
     <div>
       <div className={styles.pageHeader}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <h1>{getGreeting()}, {user?.name?.split(' ')[0] || 'Trader'}</h1>
+          <h1>{greeting}, {user?.name?.split(' ')[0] || 'Trader'}</h1>
           <p>Here is your market overview for today.</p>
         </motion.div>
       </div>

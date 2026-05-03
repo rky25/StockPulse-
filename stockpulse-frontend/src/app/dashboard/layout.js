@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  Crosshair
+  Crosshair,
+  Loader2
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
@@ -25,6 +26,9 @@ export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [marketStatus, setMarketStatus] = useState({ open: false, label: 'Checking...' });
   const router = useRouter();
   const pathname = usePathname();
@@ -79,6 +83,34 @@ export default function DashboardLayout({ children }) {
     };
   }, [router]);
 
+  // Handle autocomplete search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/proxy/search/${encodeURIComponent(searchQuery)}`);
+        const data = await res.json();
+        if (data && data.quotes) {
+          // Filter for valid equity/index symbols
+          setSearchResults(data.quotes.filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'INDEX'));
+          setShowDropdown(true);
+        }
+      } catch (err) {
+        console.error('Search error', err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const checkMarketStatus = () => {
     const now = new Date();
     // Convert current time to IST
@@ -123,7 +155,14 @@ export default function DashboardLayout({ children }) {
     { label: 'Settings', icon: <Settings size={20} />, path: '/dashboard/settings' },
   ];
 
-  if (!user) return null; // Or a loading spinner
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', width: '100%', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', color: 'var(--text-secondary)' }}>
+        <Activity size={24} color="var(--accent)" style={{ animation: 'spin 2s linear infinite', marginRight: 10 }} />
+        <span>Loading your workspace...</span>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.layout}>
@@ -163,7 +202,7 @@ export default function DashboardLayout({ children }) {
 
         <nav className={styles.navMenu}>
           {navItems.map((item) => {
-            const isActive = pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+            const isActive = pathname === item.path || (item.path !== '/dashboard' && pathname?.startsWith(item.path));
             return (
               <Link 
                 key={item.path} 
@@ -212,14 +251,38 @@ export default function DashboardLayout({ children }) {
                 <input 
                   id="global-search"
                   type="text" 
+                  autoComplete="off"
                   placeholder="Search stocks (e.g., RELIANCE)" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => { if (searchResults.length > 0) setShowDropdown(true); }}
+                  onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                   className={styles.searchInput}
                 />
                 <div className={styles.searchShortcut}>
-                  <kbd>⌘</kbd> <kbd>K</kbd>
+                  {isSearching ? <Loader2 size={16} className={styles.searchSpinner} /> : <><kbd>⌘</kbd> <kbd>K</kbd></>}
                 </div>
+
+                {/* Autocomplete Dropdown */}
+                {showDropdown && searchResults.length > 0 && (
+                  <div className={styles.searchDropdown}>
+                    {searchResults.map((result, i) => (
+                      <div 
+                        key={result.symbol + i} 
+                        className={styles.searchResultItem}
+                        onClick={() => {
+                          setSearchQuery('');
+                          setShowDropdown(false);
+                          router.push(`/dashboard/stock/${result.symbol}`);
+                        }}
+                      >
+                        <div className={styles.resultSymbol}>{result.symbol.replace('.NS', '').replace('.BO', '')}</div>
+                        <div className={styles.resultName}>{result.shortname || result.longname}</div>
+                        <div className={styles.resultExchange}>{result.exchange}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </form>
           </div>

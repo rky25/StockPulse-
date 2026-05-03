@@ -1,56 +1,41 @@
-const https = require('https');
+const nodemailer = require('nodemailer');
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_PORT = process.env.SMTP_PORT || 587;
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASSWORD = process.env.SMTP_PASSWORD || '';
+const SMTP_FROM_NAME = process.env.SMTP_FROM_NAME || 'StockPulse';
+
+const transporter = nodemailer.createTransport({
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: false, 
+  auth: {
+    user: SMTP_USER,
+    pass: SMTP_PASSWORD,
+  },
+});
 
 const sendEmail = async (to, subject, text, html) => {
-  if (!RESEND_API_KEY) {
-    console.error('RESEND_API_KEY not configured');
+  if (!SMTP_USER || !SMTP_PASSWORD) {
+    console.error('SMTP credentials not configured in .env');
     return false;
   }
 
-  const payload = JSON.stringify({
-    from: 'StockPulse <onboarding@resend.dev>',
-    to: [to],
-    subject,
-    text,
-    html,
-  });
-
-  return new Promise((resolve) => {
-    const req = https.request(
-      {
-        hostname: 'api.resend.com',
-        path: '/emails',
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload),
-        },
-      },
-      (res) => {
-        let body = '';
-        res.on('data', (chunk) => (body += chunk));
-        res.on('end', () => {
-          if (res.statusCode === 200 || res.statusCode === 201) {
-            console.log('Email sent successfully via Resend');
-            resolve(true);
-          } else {
-            console.error('Resend API error:', res.statusCode, body);
-            resolve(false);
-          }
-        });
-      }
-    );
-
-    req.on('error', (err) => {
-      console.error('Error sending email via Resend:', err.message);
-      resolve(false);
+  try {
+    const info = await transporter.sendMail({
+      from: `"${SMTP_FROM_NAME}" <${SMTP_USER}>`,
+      to: to,
+      subject: subject,
+      text: text,
+      html: html,
     });
-
-    req.write(payload);
-    req.end();
-  });
+    console.log('Email sent successfully:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error.message);
+    return false;
+  }
 };
 
 const sendVerificationEmail = (email, otp) => {

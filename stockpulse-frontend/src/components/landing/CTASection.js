@@ -1,10 +1,28 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
-export default function CTASection() {
+  const [particles, setParticles] = useState([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 6 }).map((_, i) => ({
+        id: i,
+        width: 4 + Math.random() * 4,
+        height: 4 + Math.random() * 4,
+        background: i % 2 === 0 ? 'var(--accent)' : 'var(--accent-cyan)',
+        opacity: 0.15 + Math.random() * 0.15,
+        left: `${10 + Math.random() * 80}%`,
+        top: `${10 + Math.random() * 80}%`,
+        animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
+        animationDelay: `${Math.random() * 3}s`,
+      }))
+    );
+  }, []);
+
   return (
     <section style={{
       padding: '100px 0',
@@ -22,20 +40,20 @@ export default function CTASection() {
 
       {/* Floating particles */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-        {Array.from({ length: 6 }).map((_, i) => (
+        {particles.map((p) => (
           <div
-            key={i}
+            key={p.id}
             style={{
               position: 'absolute',
-              width: 4 + Math.random() * 4,
-              height: 4 + Math.random() * 4,
+              width: p.width,
+              height: p.height,
               borderRadius: '50%',
-              background: i % 2 === 0 ? 'var(--accent)' : 'var(--accent-cyan)',
-              opacity: 0.15 + Math.random() * 0.15,
-              left: `${10 + Math.random() * 80}%`,
-              top: `${10 + Math.random() * 80}%`,
-              animation: `float ${3 + Math.random() * 4}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 3}s`,
+              background: p.background,
+              opacity: p.opacity,
+              left: p.left,
+              top: p.top,
+              animation: p.animation,
+              animationDelay: p.animationDelay,
             }}
           />
         ))}

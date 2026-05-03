@@ -8,7 +8,7 @@ import styles from './HeroSection.module.css';
 
 const words = ['AI-Powered Signals', 'Real-Time Charts', 'Technical Analysis', 'Smart Trading'];
 
-const tickerStocks = [
+const DEFAULT_TICKER = [
   { symbol: 'RELIANCE', price: '₹1,430.80', change: '+0.38%', up: true },
   { symbol: 'TCS', price: '₹3,842.15', change: '+1.24%', up: true },
   { symbol: 'HDFCBANK', price: '₹1,678.30', change: '-0.15%', up: false },
@@ -19,10 +19,43 @@ const tickerStocks = [
   { symbol: 'BHARTIARTL', price: '₹1,654.20', change: '-0.33%', up: false },
 ];
 
+async function fetchQuote(symbol) {
+  try {
+    const res = await fetch(`/api/proxy/chart/${symbol}.NS?interval=1d&range=1d`);
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta) return null;
+    const change = meta.regularMarketPrice - meta.chartPreviousClose;
+    const changePct = +((change / meta.chartPreviousClose) * 100).toFixed(2);
+    return {
+      symbol: symbol,
+      price: `₹${meta.regularMarketPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      change: `${changePct >= 0 ? '+' : ''}${changePct}%`,
+      up: change >= 0
+    };
+  } catch { return null; }
+}
+
 export default function HeroSection() {
   const [wordIndex, setWordIndex] = useState(0);
   const [displayed, setDisplayed] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [stocks, setStocks] = useState(DEFAULT_TICKER);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchLive = async () => {
+      try {
+        const promises = DEFAULT_TICKER.map(s => fetchQuote(s.symbol));
+        const results = await Promise.all(promises);
+        if (!mounted) return;
+        const newStocks = DEFAULT_TICKER.map((def, i) => results[i] || def);
+        setStocks(newStocks);
+      } catch {}
+    };
+    fetchLive();
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     const current = words[wordIndex];
@@ -43,6 +76,9 @@ export default function HeroSection() {
   }, [displayed, isDeleting, wordIndex]);
 
   const barHeights = [30, 55, 40, 70, 50, 85, 60, 75, 90, 65, 80, 55, 70, 45, 60];
+  const rel = stocks.find(s => s.symbol === 'RELIANCE') || stocks[0];
+  const tcs = stocks.find(s => s.symbol === 'TCS') || stocks[1];
+  const infy = stocks.find(s => s.symbol === 'INFY') || stocks[3];
 
   return (
     <section className={styles.hero}>
@@ -150,37 +186,37 @@ export default function HeroSection() {
               <div className={styles.previewContent}>
                 <div className={styles.miniCard}>
                   <div className={styles.miniCardHeader}>
-                    <div className={styles.miniCardLabel}>RELIANCE</div>
-                    <div className={`${styles.miniCardChange} ${styles.changeUp}`}>+0.38%</div>
+                    <div className={styles.miniCardLabel}>{rel.symbol}</div>
+                    <div className={`${styles.miniCardChange} ${rel.up ? styles.changeUp : styles.changeDown}`}>{rel.change}</div>
                   </div>
-                  <div className={styles.miniCardValue}>₹1,430.80</div>
+                  <div className={styles.miniCardValue}>{rel.price}</div>
                   <div className={styles.miniChart}>
                     {barHeights.map((h, i) => (
-                      <div key={i} className={styles.miniBar} style={{ height: `${h}%`, animationDelay: `${i * 0.05}s` }} />
+                      <div key={i} className={`${styles.miniBar} ${!rel.up ? styles.miniBarRed : ''}`} style={{ height: `${h}%`, animationDelay: `${i * 0.05}s` }} />
                     ))}
                   </div>
                 </div>
                 <div className={styles.miniCard}>
                   <div className={styles.miniCardHeader}>
-                    <div className={styles.miniCardLabel}>TCS</div>
-                    <div className={`${styles.miniCardChange} ${styles.changeUp}`}>+1.24%</div>
+                    <div className={styles.miniCardLabel}>{tcs.symbol}</div>
+                    <div className={`${styles.miniCardChange} ${tcs.up ? styles.changeUp : styles.changeDown}`}>{tcs.change}</div>
                   </div>
-                  <div className={styles.miniCardValue}>₹3,842.15</div>
+                  <div className={styles.miniCardValue}>{tcs.price}</div>
                   <div className={styles.miniChart}>
                     {barHeights.slice().reverse().map((h, i) => (
-                      <div key={i} className={styles.miniBar} style={{ height: `${h}%`, animationDelay: `${i * 0.05}s` }} />
+                      <div key={i} className={`${styles.miniBar} ${!tcs.up ? styles.miniBarRed : ''}`} style={{ height: `${h}%`, animationDelay: `${i * 0.05}s` }} />
                     ))}
                   </div>
                 </div>
                 <div className={styles.miniCard}>
                   <div className={styles.miniCardHeader}>
-                    <div className={styles.miniCardLabel}>INFY</div>
-                    <div className={`${styles.miniCardChange} ${styles.changeDown}`}>-0.52%</div>
+                    <div className={styles.miniCardLabel}>{infy.symbol}</div>
+                    <div className={`${styles.miniCardChange} ${infy.up ? styles.changeUp : styles.changeDown}`}>{infy.change}</div>
                   </div>
-                  <div className={styles.miniCardValue}>₹1,567.90</div>
+                  <div className={styles.miniCardValue}>{infy.price}</div>
                   <div className={styles.miniChart}>
                     {barHeights.map((h, i) => (
-                      <div key={i} className={`${styles.miniBar} ${styles.miniBarRed}`} style={{ height: `${(h + i * 3) % 100}%`, animationDelay: `${i * 0.05}s` }} />
+                      <div key={i} className={`${styles.miniBar} ${!infy.up ? styles.miniBarRed : ''}`} style={{ height: `${(h + i * 3) % 100}%`, animationDelay: `${i * 0.05}s` }} />
                     ))}
                   </div>
                 </div>
@@ -193,7 +229,7 @@ export default function HeroSection() {
       {/* Stock Ticker */}
       <div className={styles.tickerWrap}>
         <div className={styles.ticker}>
-          {[...tickerStocks, ...tickerStocks].map((stock, i) => (
+          {[...stocks, ...stocks].map((stock, i) => (
             <div key={i} className={styles.tickerItem}>
               <span className={styles.tickerSymbol}>{stock.symbol}</span>
               <span className={styles.tickerPrice}>{stock.price}</span>
