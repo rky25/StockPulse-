@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
   secure: false, 
   auth: {
     user: SMTP_USER,
-    pass: SMTP_PASSWORD,
+    pass: SMTP_PASSWORD.replace(/\s+/g, ''),
   },
 });
 
