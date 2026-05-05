@@ -154,7 +154,8 @@ export default function StockPage({ params }) {
       if (result) {
         setAnalysis(result);
         // Calculate entry/exit
-        const ee = Trading.calcEntryExit(price, result.atr, result.overall, result.pivots, capital, riskPct, vixValue);
+        const prevClose = meta?.regularMarketPreviousClose || null;
+        const ee = Trading.calcEntryExit(price, result.atr, result.overall, result.pivots, capital, riskPct, vixValue, prevClose);
         setEntryExit(ee);
       }
 

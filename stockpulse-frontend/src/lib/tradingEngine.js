@@ -565,9 +565,14 @@ const Trading = {
   },
 
   // ===== ENTRY/EXIT CALCULATOR (1.5:1 and 3:1 R:R) — Phase 4: VIX-aware =====
-  calcEntryExit(price, atr, signal, pivots, capital=100000, riskPct=1, vixValue=0) {
+  calcEntryExit(price, atr, signal, pivots, capital=100000, riskPct=1, vixValue=0, prevClose=null) {
     if (signal !== 'BUY' && signal !== 'STRONG BUY' && signal !== 'SELL' && signal !== 'STRONG SELL') return null;
     const isBuy = signal === 'BUY' || signal === 'STRONG BUY';
+
+    // Define circuit boundaries (assuming a standard 20% max circuit if prevClose exists)
+    // You can adjust the 0.20 if specific stocks have 5% or 10% circuits.
+    const upperCircuit = prevClose ? prevClose * 1.20 : Infinity;
+    const lowerCircuit = prevClose ? prevClose * 0.80 : 0;
 
     // VIX-dynamic ATR multiplier for stop loss
     const vixAdj = this.getVixAdjustment(vixValue);
@@ -578,6 +583,14 @@ const Trading = {
       if (isBuy && price > pivots.pivot && price - pivots.pivot < 2.5 * atr) sl = Math.min(sl, pivots.pivot - atr * 0.5);
       else if (!isBuy && price < pivots.pivot && pivots.pivot - price < 2.5 * atr) sl = Math.max(sl, pivots.pivot + atr * 0.5);
     }
+
+    // Apply circuit limit ceilings to Stop Loss before risk calculation
+    if (isBuy) {
+      sl = Math.max(sl, lowerCircuit);
+    } else {
+      sl = Math.min(sl, upperCircuit);
+    }
+
     const risk = Math.abs(price - sl);
     const riskBudget = capital * (riskPct / 100);
     // VIX-dynamic position sizing
@@ -596,6 +609,18 @@ const Trading = {
         if (t2 > pivots.s2 && price > pivots.s2) t2 = pivots.s2;
       }
     }
+
+    // Apply circuit limit ceilings to Targets
+    if (isBuy) {
+      t1 = Math.min(t1, upperCircuit);
+      t2 = Math.min(t2, upperCircuit);
+      t3 = Math.min(t3, upperCircuit);
+    } else {
+      t1 = Math.max(t1, lowerCircuit);
+      t2 = Math.max(t2, lowerCircuit);
+      t3 = Math.max(t3, lowerCircuit);
+    }
+
     return {
       type: isBuy ? 'BUY' : 'SELL', entry: price, sl: +sl.toFixed(2), risk: +risk.toFixed(2),
       target1: +t1.toFixed(2), target2: +t2.toFixed(2), target3: +t3.toFixed(2),
