@@ -139,6 +139,8 @@ export default function DashboardLayout({ children }) {
     router.push('/signin');
   };
 
+  const showLabels = isSidebarOpen || isMobileMenuOpen;
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -181,7 +183,7 @@ export default function DashboardLayout({ children }) {
             <div className={styles.logoIcon}>
               <Activity size={18} color="white" />
             </div>
-            {isSidebarOpen && <span>Stock<span className={styles.logoAccent}>Pulse</span></span>}
+            {showLabels && <span>Stock<span className={styles.logoAccent}>Pulse</span></span>}
           </Link>
           
           <button 
@@ -208,12 +210,12 @@ export default function DashboardLayout({ children }) {
                 key={item.path} 
                 href={item.path}
                 className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-                title={!isSidebarOpen ? item.label : undefined}
+                title={!showLabels ? item.label : undefined}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <div className={styles.navIcon}>{item.icon}</div>
-                {isSidebarOpen && <span className={styles.navLabel}>{item.label}</span>}
-                {isSidebarOpen && isActive && (
+                {showLabels && <span className={styles.navLabel}>{item.label}</span>}
+                {showLabels && isActive && (
                   <motion.div layoutId="activeNavIndicator" className={styles.activeIndicator} />
                 )}
               </Link>
@@ -225,10 +227,10 @@ export default function DashboardLayout({ children }) {
           <button 
             className={styles.logoutBtn} 
             onClick={handleLogout}
-            title={!isSidebarOpen ? "Log Out" : undefined}
+            title={!showLabels ? "Log Out" : undefined}
           >
             <LogOut size={20} />
-            {isSidebarOpen && <span>Log Out</span>}
+            {showLabels && <span>Log Out</span>}
           </button>
         </div>
       </aside>
