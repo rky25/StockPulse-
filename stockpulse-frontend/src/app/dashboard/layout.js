@@ -20,6 +20,7 @@ import {
   Loader2
 } from 'lucide-react';
 import styles from './dashboard.module.css';
+import ChatBot from '@/components/dashboard/ChatBot';
 
 export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
@@ -317,6 +318,9 @@ export default function DashboardLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* AI ChatBot Widget */}
+      <ChatBot />
     </div>
   );
 }
