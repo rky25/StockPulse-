@@ -131,7 +131,7 @@ export default function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            <Link href="/signup" className={`btn btn-primary btn-lg ${styles.ctaPrimary}`}>
+            <Link href="/signin" className={`btn btn-primary btn-lg ${styles.ctaPrimary}`}>
               Start Free <ArrowRight size={18} />
             </Link>
             <a href="#features" className="btn btn-secondary btn-lg">

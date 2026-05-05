@@ -54,7 +54,7 @@ export default function Navbar() {
             <Link href="/signin" className={styles.signInBtn}>
               Log In
             </Link>
-            <Link href="/signup" className={styles.getStartedBtn}>
+            <Link href="/signin" className={styles.getStartedBtn}>
               Get Started <ArrowRight size={16} />
             </Link>
             <button
@@ -98,7 +98,7 @@ export default function Navbar() {
           <Link href="/signin" className={styles.signInBtn} onClick={() => setMobileOpen(false)}>
             Log In
           </Link>
-          <Link href="/signup" className={styles.getStartedBtn} onClick={() => setMobileOpen(false)}>
+          <Link href="/signin" className={styles.getStartedBtn} onClick={() => setMobileOpen(false)}>
             Get Started Free <ArrowRight size={16} />
           </Link>
         </div>

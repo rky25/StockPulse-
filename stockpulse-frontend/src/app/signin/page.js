@@ -162,8 +162,7 @@ export default function SignInPage() {
         </form>
 
         <p className={styles.authSwitch}>
-          Don&apos;t have an account?{' '}
-          <Link href="/signup">Sign up free</Link>
+          Use the credentials above to access the dashboard
         </p>
       </motion.div>
     </div>

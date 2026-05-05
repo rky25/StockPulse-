@@ -109,7 +109,7 @@ export default function CTASection() {
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-            <Link href="/signup" className="btn btn-primary btn-lg" style={{ position: 'relative' }}>
+            <Link href="/signin" className="btn btn-primary btn-lg" style={{ position: 'relative' }}>
               Get Started Free <ArrowRight size={18} />
             </Link>
           </div>

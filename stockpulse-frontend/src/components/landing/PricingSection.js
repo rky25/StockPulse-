@@ -204,7 +204,7 @@ export default function PricingSection() {
               </div>
 
               <Link
-                href="/signup"
+                href="/signin"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
