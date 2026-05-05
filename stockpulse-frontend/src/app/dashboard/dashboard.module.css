@@ -564,7 +564,7 @@
   }
   
   .searchForm {
-    display: none;
+    max-width: 160px;
   }
   
   .marketStatus {
