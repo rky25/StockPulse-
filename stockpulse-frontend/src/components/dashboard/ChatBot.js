@@ -34,8 +34,6 @@ export default function ChatBot() {
   const textareaRef = useRef(null);
   const chatWindowRef = useRef(null);
 
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
-
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -105,7 +103,7 @@ export default function ChatBot() {
     }
 
     try {
-      const res = await fetch(`${backendUrl}/api/chat`, {
+      const res = await fetch('/api/proxy/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
