@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }) {
     localStorage.removeItem('stockpulse_user');
     sessionStorage.removeItem('stockpulse_token');
     sessionStorage.removeItem('stockpulse_user');
-    router.push('/signin');
+    router.push('/');
   };
 
   const showLabels = isSidebarOpen || isMobileMenuOpen;
