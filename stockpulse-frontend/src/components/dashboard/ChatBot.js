@@ -11,16 +11,26 @@ import {
   Trash2, 
   Sparkles,
   Minimize2,
-  Zap
+  Zap,
+  Activity
 } from 'lucide-react';
 import styles from './ChatBot.module.css';
+import { useStockContext } from '@/lib/StockContext';
 
-const SUGGESTIONS = [
+const GENERAL_SUGGESTIONS = [
   'What is RSI?',
   'Explain VWAP',
   'What is a stop loss?',
   'How to read candlesticks?',
   'What is Supertrend?',
+];
+
+const STOCK_SUGGESTIONS = [
+  'Should I buy this stock?',
+  'What does the signal say?',
+  'Explain the current setup',
+  'Is the risk worth it?',
+  'What are the key levels?',
 ];
 
 export default function ChatBot() {
@@ -33,6 +43,7 @@ export default function ChatBot() {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const chatWindowRef = useRef(null);
+  const { stockData } = useStockContext();
 
   // Auto-scroll to bottom on new messages
   const scrollToBottom = useCallback(() => {
@@ -81,6 +92,80 @@ export default function ChatBot() {
     });
   };
 
+  // Build context from live stock data
+  const buildContext = () => {
+    if (!stockData) {
+      return {
+        symbol: 'General',
+        price: '--',
+        change: '--',
+        signal: 'N/A',
+        confidence: '--',
+        vwap: '--',
+        rsi: '--',
+        supertrend: '--',
+        adx: '--',
+        atr: '--',
+        setup: 'User is asking a general question about trading concepts',
+        regime: '--',
+        vix: '--',
+        sectorTrend: '--',
+        niftyTrend: '--',
+        entry: '--',
+        sl: '--',
+        t1: '--',
+        t2: '--',
+        rr: '--',
+        orbHigh: '--',
+        orbLow: '--',
+        dayHigh: '--',
+        dayLow: '--',
+        prevClose: '--',
+        volume: '--',
+        news: 'No specific stock context — user is asking a general trading/technical analysis question.',
+      };
+    }
+
+    return {
+      symbol: stockData.symbol,
+      displaySymbol: stockData.displaySymbol,
+      price: stockData.price,
+      change: stockData.change,
+      signal: stockData.signal,
+      confidence: stockData.confidence,
+      vwap: stockData.vwap,
+      rsi: stockData.rsi,
+      supertrend: stockData.supertrend,
+      supertrendDir: stockData.supertrendDir,
+      adx: stockData.adx,
+      atr: stockData.atr,
+      setup: stockData.setup,
+      setupDesc: stockData.setupDesc,
+      regime: stockData.regime,
+      vix: stockData.vix,
+      sectorTrend: stockData.sectorTrend,
+      niftyTrend: stockData.niftyTrend,
+      trend15m: stockData.trend15m,
+      entry: stockData.entry,
+      sl: stockData.sl,
+      t1: stockData.t1,
+      t2: stockData.t2,
+      t3: stockData.t3,
+      qty: stockData.qty,
+      rr: stockData.rr,
+      dayHigh: stockData.dayHigh,
+      dayLow: stockData.dayLow,
+      prevClose: stockData.prevClose,
+      volume: stockData.volume,
+      verdictReason: stockData.verdictReason,
+      buyVotes: stockData.buyVotes,
+      sellVotes: stockData.sellVotes,
+      warnings: stockData.warnings?.join(', ') || 'None',
+      volRatio: stockData.volRatio,
+      news: 'No news data available at this time.',
+    };
+  };
+
   const sendMessage = async (text) => {
     const trimmed = (text || input).trim();
     if (!trimmed || isLoading) return;
@@ -103,39 +188,14 @@ export default function ChatBot() {
     }
 
     try {
+      const context = buildContext();
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: trimmed,
-          context: {
-            symbol: 'General',
-            price: '--',
-            change: '--',
-            signal: 'N/A',
-            confidence: '--',
-            vwap: '--',
-            rsi: '--',
-            supertrend: '--',
-            adx: '--',
-            atr: '--',
-            setup: 'User is asking a general question about trading concepts',
-            regime: '--',
-            vix: '--',
-            sectorTrend: '--',
-            entry: '--',
-            sl: '--',
-            t1: '--',
-            t2: '--',
-            rr: '--',
-            orbHigh: '--',
-            orbLow: '--',
-            dayHigh: '--',
-            dayLow: '--',
-            prevClose: '--',
-            volume: '--',
-            news: 'No specific stock context — user is asking a general trading/technical analysis question.',
-          },
+          context: context,
         }),
       });
 
@@ -191,6 +251,9 @@ export default function ChatBot() {
     formatted = formatted.replace(/\n/g, '<br/>');
     return formatted;
   };
+
+  const hasStock = !!stockData;
+  const suggestions = hasStock ? STOCK_SUGGESTIONS : GENERAL_SUGGESTIONS;
 
   return (
     <>
@@ -253,6 +316,26 @@ export default function ChatBot() {
             </div>
           </div>
 
+          {/* Active Stock Banner */}
+          {hasStock && (
+            <div className={styles.stockBanner}>
+              <div className={styles.stockBannerIcon}>
+                <Activity size={14} />
+              </div>
+              <div className={styles.stockBannerInfo}>
+                <span className={styles.stockBannerSymbol}>{stockData.displaySymbol}</span>
+                <span className={styles.stockBannerPrice}>₹{typeof stockData.price === 'number' ? stockData.price.toLocaleString('en-IN', { minimumFractionDigits: 2 }) : stockData.price}</span>
+              </div>
+              <span className={`${styles.stockBannerSignal} ${
+                stockData.signal?.includes('BUY') ? styles.signalBuy : 
+                stockData.signal?.includes('SELL') ? styles.signalSell : 
+                styles.signalNeutral
+              }`}>
+                {stockData.signal} • {stockData.confidence}%
+              </span>
+            </div>
+          )}
+
           {/* Messages */}
           <div className={styles.chatMessages}>
             {messages.length === 0 && !isLoading ? (
@@ -260,11 +343,24 @@ export default function ChatBot() {
                 <div className={styles.welcomeIcon}>
                   <Sparkles size={26} color="white" />
                 </div>
-                <h4>Hey! I&apos;m StockPulse AI 👋</h4>
-                <p>
-                  Ask me anything about trading, technical analysis, indicators, 
-                  or stock market concepts.
-                </p>
+                {hasStock ? (
+                  <>
+                    <h4>Analyzing {stockData.displaySymbol} 📊</h4>
+                    <p>
+                      I have all the live data for <strong>{stockData.displaySymbol}</strong> — 
+                      price, VWAP, RSI, signals, and more.
+                      Ask me anything about this stock!
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h4>Hey! I&apos;m StockPulse AI 👋</h4>
+                    <p>
+                      Ask me anything about trading, technical analysis, indicators, 
+                      or stock market concepts. Search for a stock to get live analysis!
+                    </p>
+                  </>
+                )}
               </div>
             ) : (
               <>
@@ -340,7 +436,7 @@ export default function ChatBot() {
           {/* Quick suggestions */}
           {messages.length === 0 && !isLoading && (
             <div className={styles.suggestions}>
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   className={styles.suggestionChip}
@@ -358,7 +454,7 @@ export default function ChatBot() {
               <textarea
                 ref={textareaRef}
                 className={styles.chatTextarea}
-                placeholder="Ask about trading concepts..."
+                placeholder={hasStock ? `Ask about ${stockData.displaySymbol}...` : 'Ask about trading concepts...'}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}

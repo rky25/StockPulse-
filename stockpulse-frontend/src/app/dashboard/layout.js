@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 import ChatBot from '@/components/dashboard/ChatBot';
+import { StockProvider } from '@/lib/StockContext';
 
 export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
@@ -168,6 +169,7 @@ export default function DashboardLayout({ children }) {
   }
 
   return (
+    <StockProvider>
     <div className={styles.layout}>
       {/* Sidebar Overlay for Mobile */}
       {isMobileMenuOpen && (
@@ -322,5 +324,6 @@ export default function DashboardLayout({ children }) {
       {/* AI ChatBot Widget */}
       <ChatBot />
     </div>
+    </StockProvider>
   );
 }

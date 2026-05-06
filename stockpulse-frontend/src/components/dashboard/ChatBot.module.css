@@ -575,6 +575,78 @@
   color: var(--red-light);
 }
 
+/* ---- Active Stock Banner ---- */
+.stockBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, rgba(41, 98, 255, 0.06) 0%, rgba(0, 188, 212, 0.03) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  animation: msgFadeIn 0.3s ease forwards;
+}
+
+.stockBannerIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stockBannerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stockBannerSymbol {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+}
+
+.stockBannerPrice {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.stockBannerSignal {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.signalBuy {
+  background: rgba(0, 200, 83, 0.12);
+  color: #00C853;
+  border: 1px solid rgba(0, 200, 83, 0.25);
+}
+
+.signalSell {
+  background: rgba(255, 23, 68, 0.12);
+  color: #FF1744;
+  border: 1px solid rgba(255, 23, 68, 0.25);
+}
+
+.signalNeutral {
+  background: rgba(158, 158, 158, 0.12);
+  color: #9E9E9E;
+  border: 1px solid rgba(158, 158, 158, 0.25);
+}
+
 /* ---- Powered By ---- */
 .poweredBy {
   text-align: center;

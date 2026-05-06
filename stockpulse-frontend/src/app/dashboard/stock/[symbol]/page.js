@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, use } from 'react';
 import { TrendingUp, TrendingDown, Clock, Activity as ActivityIcon, ShieldAlert, Target, Crosshair, AlertTriangle, Zap, BarChart3, Eye } from 'lucide-react';
 import TradingChart from '../../../../components/dashboard/TradingChart';
 import { Trading, CONFIG } from '../../../../lib/tradingEngine';
+import { useStockContext } from '../../../../lib/StockContext';
 
 /* ── Helper: fetch Yahoo chart data ── */
 async function fetchChart(symbol, interval, range) {
@@ -95,6 +96,7 @@ export default function StockPage({ params }) {
   const [realCandles, setRealCandles] = useState([]);
   const [capital, setCapital] = useState(100000);
   const [riskPct, setRiskPct] = useState(1);
+  const { updateStockData, clearStockData } = useStockContext();
 
   /* Fetch all data and run analysis */
   const runAnalysis = useCallback(async () => {
@@ -157,6 +159,46 @@ export default function StockPage({ params }) {
         const prevClose = meta?.regularMarketPreviousClose || null;
         const ee = Trading.calcEntryExit(price, result.atr, result.overall, result.pivots, capital, riskPct, vixValue, prevClose);
         setEntryExit(ee);
+
+        // Push all live data to StockContext for the chatbot
+        updateStockData({
+          symbol: symbol,
+          displaySymbol: displaySymbol,
+          price: price,
+          change: meta ? `${(meta.regularMarketPrice - meta.chartPreviousClose).toFixed(2)} (${(((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100).toFixed(2)}%)` : '--',
+          signal: result.overall,
+          confidence: result.confidence,
+          vwap: result.vwap?.toFixed(2),
+          rsi: result.strategies?.find(s => s.name === 'RSI (14)')?.value || '--',
+          supertrend: result.supertrend?.toFixed(2),
+          supertrendDir: result.supertrendDir === 1 ? 'BULLISH' : 'BEARISH',
+          adx: result.adxValue?.toFixed(1),
+          atr: result.atr?.toFixed(2),
+          setup: result.setup?.name || 'None',
+          setupDesc: result.setup?.description || '',
+          regime: result.regimeDesc || result.regime,
+          vix: vixValue?.toFixed(1),
+          sectorTrend: result.strategies?.find(s => s.name === 'Sector')?.value || '--',
+          niftyTrend: niftyTrend || '--',
+          trend15m: trend15m || '--',
+          entry: ee?.entry?.toFixed(2) || '--',
+          sl: ee?.sl || '--',
+          t1: ee?.target1 || '--',
+          t2: ee?.target2 || '--',
+          t3: ee?.target3 || '--',
+          qty: ee?.qty || '--',
+          rr: ee ? `1:${((ee.target1 - ee.entry) / (ee.entry - ee.sl)).toFixed(1)}` : '--',
+          dayHigh: meta?.regularMarketDayHigh || '--',
+          dayLow: meta?.regularMarketDayLow || '--',
+          prevClose: meta?.chartPreviousClose || '--',
+          volume: meta?.regularMarketVolume?.toLocaleString('en-IN') || '--',
+          verdictReason: result.verdictReason,
+          buyVotes: result.buyVotes,
+          sellVotes: result.sellVotes,
+          warnings: result.warnings,
+          volRatio: result.volRatio?.toFixed(1),
+          pivots: result.pivots,
+        });
       }
 
       setLoading(false);
@@ -200,8 +242,9 @@ export default function StockPage({ params }) {
     return () => {
       clearInterval(fastTimer);
       clearInterval(slowTimer);
+      clearStockData(); // Clear context when leaving the stock page
     };
-  }, [runAnalysis, fetchFastQuote]);
+  }, [runAnalysis, fetchFastQuote, clearStockData]);
 
   const price = quote?.regularMarketPrice || 0;
   const change = quote?.regularMarketChange || 0;
@@ -376,7 +419,7 @@ export default function StockPage({ params }) {
           { label: '52W High', value: quote?.fiftyTwoWeekHigh },
           { label: '52W Low', value: quote?.fiftyTwoWeekLow },
           { label: 'ADX', value: analysis?.adxValue?.toFixed(1) },
-          { label: 'Vol Ratio', value: analysis?.volRatio?.toFixed(1) + 'x' },
+          { label: 'Vol Ratio', value: analysis?.volRatio != null ? analysis.volRatio.toFixed(1) + 'x' : null },
         ].map((item, i) => (
           <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>{item.label}</div>
