@@ -292,7 +292,7 @@ export default function ChatBot() {
               <div className={styles.chatHeaderInfo}>
                 <h3>StockPulse AI</h3>
                 <p>
-                  <Zap size={10} /> Powered by Llama 3.1
+                  <Zap size={10} /> Powered by AI
                 </p>
               </div>
             </div>
@@ -480,7 +480,7 @@ export default function ChatBot() {
 
           {/* Powered by */}
           <div className={styles.poweredBy}>
-            <Sparkles size={10} /> StockPulse AI • Llama 3.1 70B
+            <Sparkles size={10} /> StockPulse AI
           </div>
         </div>
       )}
